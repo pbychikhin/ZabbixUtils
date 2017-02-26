@@ -26,7 +26,7 @@ class IIS_binding_info:
         pref_binding_found_both = False
         pref_binding_found_host = False
         for b in site_instance.Bindings:
-            binding = dict(zip(["addr", "port", "host", "proto"], b.BindingInformation.split(":") + [b.protocol]))
+            binding = dict(zip(["addr", "port", "host"], b.BindingInformation.split(":")), proto=b.protocol)
             found_host, found_proto = False, False
             if prefhost and re.search(re.escape(prefhost), binding["host"], re.I):
                 found_host = True
