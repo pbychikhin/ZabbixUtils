@@ -1,6 +1,6 @@
 
 
-# Id: $Id$
+# $Id$
 
 import json
 import re
