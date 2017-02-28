@@ -1,7 +1,5 @@
 
 
-# $Id$
-
 import json
 import re
 from wmi import WMI
@@ -60,14 +58,12 @@ class IIS_site_info:
 
 
 sites = [IIS_site_info(site) for site in WMI(namespace=WMI_IIS_NAMESPACE).instances("Site")]
-zabbix_data = {"data": []}
-for site in sites:
-    zabbix_data_entry = {
+zabbix_data = {"data": [{
         "{#SITE_NAME}": site.get_name(),
         "{#SITE_STATE}": site.get_state(),
         "{#SITE_PROTO}": site.get_pref_binding()["proto"],
         "{#SITE_HOST}": site.get_pref_binding()["host"],
         "{#SITE_PORT}": site.get_pref_binding()["port"],
         "{#SITE_ADDR}": site.get_pref_binding()["addr"]}
-    zabbix_data["data"].append(zabbix_data_entry)
+                        for site in sites]}
 print(json.dumps(zabbix_data))
