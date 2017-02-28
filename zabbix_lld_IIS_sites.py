@@ -7,7 +7,6 @@ import re
 from wmi import WMI
 from argparse import ArgumentParser
 
-ZABBIX_API_PATH = "api_jsonrpc.php"
 WMI_IIS_NAMESPACE = "root/WebAdministration"
 IIS_PREF_PROTO = "https"
 
