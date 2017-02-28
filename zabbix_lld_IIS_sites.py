@@ -1,6 +1,8 @@
 
 
-import urllib.parse
+# Id: $Id$
+
+import json
 import re
 from wmi import WMI
 from argparse import ArgumentParser
@@ -9,18 +11,18 @@ ZABBIX_API_PATH = "api_jsonrpc.php"
 WMI_IIS_NAMESPACE = "root/WebAdministration"
 IIS_PREF_PROTO = "https"
 
-cmd = ArgumentParser(description="Automatically creates Zabbix Web scenarios based on sites in IIS")
-cmd.add_argument("-hosturl", help="Zabbix's host URL", required=True)
-cmd.add_argument("-user", help="User name", default="")
-cmd.add_argument("-password", help="Password", default="")
+cmd = ArgumentParser(description="Discovers sites in local IIS using WMI")
 cmd.add_argument("-prefproto", help="Prefer host records having specific proto", default=IIS_PREF_PROTO)
 cmd.add_argument("-prefhost", help="Prefer host records having specific text in their names", default=None)
 args = cmd.parse_args()
 
 
-class IIS_binding_info:
+class IIS_site_info:
+    site_states = dict(enumerate(["starting", "started", "stopping", "stopped", "unknown"]))
+
     def __init__(self, site_instance, prefproto=IIS_PREF_PROTO, prefhost=args.prefhost):
         self.name = site_instance.Name
+        self.state = type(self).site_states[site_instance.GetState()[0]]  # GetState returns tuple instead of just int (as in docs). Don't know why
         self.bindings = []
         self.pref_binding = None
         pref_binding_found_both = False
@@ -44,18 +46,29 @@ class IIS_binding_info:
             self.bindings.append(binding)
         if self.pref_binding is None:
             self.pref_binding = self.bindings[-1]
+
     def get_name(self):
         return self.name
+
+    def get_state(self):
+        return self.state
+
     def get_bindings(self):
         return self.bindings
+
     def get_pref_binding(self):
         return self.pref_binding
 
-wmiobj = WMI(namespace=WMI_IIS_NAMESPACE)
-sites = [IIS_binding_info(site) for site in wmiobj.instances("Site")]
+
+sites = [IIS_site_info(site) for site in WMI(namespace=WMI_IIS_NAMESPACE).instances("Site")]
+zabbix_data = {"data": []}
 for site in sites:
-    print(site.get_name())
-    print("{}protocol: {}".format(" "*3, site.get_pref_binding()["proto"]))
-    print("{}host: {}".format(" "*3, site.get_pref_binding()["host"]))
-    print("{}port: {}".format(" "*3, site.get_pref_binding()["port"]))
-    print("{}addr: {}".format(" "*3, site.get_pref_binding()["addr"]))
+    zabbix_data_entry = {
+        "{#SITE_NAME}": site.get_name(),
+        "{#SITE_STATE}": site.get_state(),
+        "{#SITE_PROTO}": site.get_pref_binding()["proto"],
+        "{#SITE_HOST}": site.get_pref_binding()["host"],
+        "{#SITE_PORT}": site.get_pref_binding()["port"],
+        "{#SITE_ADDR}": site.get_pref_binding()["addr"]}
+    zabbix_data["data"].append(zabbix_data_entry)
+print(json.dumps(zabbix_data))
