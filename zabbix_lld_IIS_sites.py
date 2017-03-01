@@ -15,11 +15,11 @@ args = cmd.parse_args()
 
 
 class IIS_site_info:
-    site_states = dict(enumerate(["starting", "started", "stopping", "stopped", "unknown"]))
+    site_startup_type = {True: "auto", False: "noauto"}
 
     def __init__(self, site_instance, prefproto=IIS_PREF_PROTO, prefhost=args.prefhost):
         self.name = site_instance.Name
-        self.state = type(self).site_states[site_instance.GetState()[0]]  # GetState returns tuple instead of just int (as in docs). Don't know why
+        self.autostart = site_instance.ServerAutoStart
         self.bindings = []
         self.pref_binding = None
         pref_binding_found_both = False
@@ -47,8 +47,8 @@ class IIS_site_info:
     def get_name(self):
         return self.name
 
-    def get_state(self):
-        return self.state
+    def get_startuptype(self):
+        return type(self).site_startup_type[self.autostart]
 
     def get_bindings(self):
         return self.bindings
@@ -60,7 +60,7 @@ class IIS_site_info:
 sites = [IIS_site_info(site) for site in WMI(namespace=WMI_IIS_NAMESPACE).instances("Site")]
 zabbix_data = {"data": [{
         "{#SITE_NAME}": site.get_name(),
-        "{#SITE_STATE}": site.get_state(),
+        "{#SITE_START}": site.get_startuptype(),
         "{#SITE_PROTO}": site.get_pref_binding()["proto"],
         "{#SITE_HOST}": site.get_pref_binding()["host"],
         "{#SITE_PORT}": site.get_pref_binding()["port"],
