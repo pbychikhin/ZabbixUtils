@@ -2,15 +2,23 @@
 
 import json
 import re
+import types
+import subprocess
 from wmi import WMI
 from argparse import ArgumentParser
 
 WMI_IIS_NAMESPACE = "root/WebAdministration"
 IIS_PREF_PROTO = "https"
+PS_CMD = [
+    "powershell",
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-Command", "Get-Website|Select Name,Bindings,ServerAutoStart|ConvertTo-Json -depth 3 -compress"]
 
-cmd = ArgumentParser(description="Discovers sites in local IIS using WMI")
+cmd = ArgumentParser(description="Discovers sites in local IIS using WMI or PS")
 cmd.add_argument("-prefproto", help="Prefer host records having specific proto", default=IIS_PREF_PROTO)
 cmd.add_argument("-prefhost", help="Prefer host records having specific text in their names", default=None)
+cmd.add_argument("-method", help="Method of data retrieving", choices=["wmi", "ps"], default="wmi")
 args = cmd.parse_args()
 
 
@@ -57,7 +65,26 @@ class IIS_site_info:
         return self.pref_binding
 
 
-sites = [IIS_site_info(site) for site in WMI(namespace=WMI_IIS_NAMESPACE).instances("Site")]
+class IIS_site_info_json(IIS_site_info):
+
+    def __init__(self, site_instance_json, prefproto=IIS_PREF_PROTO, prefhost=args.prefhost):
+        site_instance = types.SimpleNamespace()
+        site_instance.Name = site_instance_json["name"]
+        site_instance.ServerAutoStart = bool(site_instance_json["serverAutoStart"])
+        site_instance.Bindings = []
+        for b in site_instance_json["bindings"]["Collection"]:
+            binding = types.SimpleNamespace()
+            binding.protocol = b["protocol"]
+            binding.BindingInformation = b["bindingInformation"]
+            site_instance.Bindings.append(binding)
+        IIS_site_info.__init__(self, site_instance, prefproto, prefhost)
+
+sites = []
+if args.method == "wmi":
+    sites = [IIS_site_info(site) for site in WMI(namespace=WMI_IIS_NAMESPACE).instances("Site")]
+elif args.method == "ps":
+    cp = subprocess.run(PS_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    sites = [IIS_site_info_json(site) for site in json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii")]
 zabbix_data = {"data": [{
         "{#SITE_NAME}": site.get_name(),
         "{#SITE_START}": site.get_startuptype(),
