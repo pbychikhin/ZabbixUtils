@@ -84,7 +84,10 @@ if args.method == "wmi":
     sites = [IIS_site_info(site) for site in WMI(namespace=WMI_IIS_NAMESPACE).instances("Site")]
 elif args.method == "ps":
     cp = subprocess.run(PS_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-    sites = [IIS_site_info_json(site) for site in json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii")]
+    try:
+        sites = [IIS_site_info_json(site) for site in json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii")]
+    except json.JSONDecodeError:
+        sites = []
 zabbix_data = {"data": [{
         "{#SITE_NAME}": site.get_name(),
         "{#SITE_START}": site.get_startuptype(),
@@ -93,4 +96,4 @@ zabbix_data = {"data": [{
         "{#SITE_PORT}": site.get_pref_binding()["port"],
         "{#SITE_ADDR}": site.get_pref_binding()["addr"]}
                         for site in sites]}
-print(json.dumps(zabbix_data))
+print(json.dumps(zabbix_data), end="")
