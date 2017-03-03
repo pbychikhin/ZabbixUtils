@@ -6,6 +6,7 @@ import types
 import subprocess
 from wmi import WMI
 from argparse import ArgumentParser
+from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 
 WMI_IIS_NAMESPACE = "root/WebAdministration"
 IIS_PREF_PROTO = "https"
@@ -85,7 +86,7 @@ if args.method == "wmi":
 elif args.method == "ps":
     cp = subprocess.run(PS_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     try:
-        sites = [IIS_site_info_json(site) for site in json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii")]
+        sites = [IIS_site_info_json(cidict(site)) for site in json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii")]
     except json.JSONDecodeError:
         sites = []
 zabbix_data = {"data": [{

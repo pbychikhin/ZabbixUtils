@@ -4,6 +4,7 @@ import json
 import subprocess
 from wmi import WMI
 from argparse import ArgumentParser
+from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 
 WMI_IIS_NAMESPACE = "root/WebAdministration"
 NOTFOUND_MESSAGE = "notfound"
@@ -29,6 +30,7 @@ elif args.method == "ps":
     try:
         PS_CMD[-1] = PS_CMD[-1].format(args.site)
         cp = subprocess.run(PS_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        print(json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii")["state"].lower(), end="")
+        print(cidict(json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii"))["state"].lower(),
+              end="")
     except json.JSONDecodeError:
         print(NOTFOUND_MESSAGE, end="")
