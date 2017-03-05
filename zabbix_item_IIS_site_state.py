@@ -10,9 +10,9 @@ WMI_IIS_NAMESPACE = "root/WebAdministration"
 NOTFOUND_MESSAGE = "notfound"
 PS_CMD = [
     "powershell",
-   "-NoProfile",
+    "-NoProfile",
     "-ExecutionPolicy", "Bypass",
-   "-Command", "Get-Website -Name \"{}\"|Select State|ConvertTo-Json -compress"]
+    "-Command", "Get-Website -Name \"{}\"|Select State|ConvertTo-Json -compress"]
 
 cmd = ArgumentParser(description="Retrieves the state of a local IIS site using WMI or PS")
 cmd.add_argument("-site", help="Site name", required=True)
