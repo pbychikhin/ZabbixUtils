@@ -24,7 +24,7 @@ args = cmd.parse_args()
 
 
 class IIS_site_info:
-    site_startup_type = {True: "auto", False: "noauto"}
+    site_startup_type = {True: "auto", False: "manual"}
 
     def __init__(self, site_instance, prefproto=IIS_PREF_PROTO, prefhost=args.prefhost):
         self.name = site_instance.Name
