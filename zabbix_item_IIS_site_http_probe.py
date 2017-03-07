@@ -39,3 +39,14 @@ class Website:
     def get_curl_host(self):
         return self.curl_resolved_host
 
+
+w = Website(args.scheme, args.host, args.port, args.addr, args.path)
+buffer = io.BytesIO()
+c = pycurl.Curl()
+c.setopt(c.URL, w.get_url())
+c.setopt(c.WRITEDATA, buffer)
+c.perform()
+c.close()
+
+body = buffer.getvalue()
+print(body.decode("ascii"))
