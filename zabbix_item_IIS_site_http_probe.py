@@ -7,6 +7,13 @@ import re
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 from cgi import parse_header
+from sys import exit
+
+
+# Constants
+OK_MESSAGE = "ok"
+CURL_FAILED_MESSAGE = "failed"
+WEBSITE_FAILED_MESSAGE = "problem"
 
 
 cmd = ArgumentParser(description="Probes a Web site over http(s)")
@@ -15,8 +22,10 @@ cmd.add_argument("-host", help="Host name", default="localhost")
 cmd.add_argument("-port", help="Optional TCP port number", default=None)
 cmd.add_argument("-addr", help="Optional IP address to connect to", default=None)
 cmd.add_argument("-path", help="Path component of the URL", default="")
-cmd.add_argument("-body", help="Regexp to search for in body", default=None)
-cmd.add_argument("-timeout", help="Operation timeout (default is 5m)", default=300)
+cmdgroup = cmd.add_mutually_exclusive_group()
+cmdgroup.add_argument("-body", metavar="REGEXP", help="For successful operation, REGEXP must be found in the body", default=None)
+cmdgroup.add_argument("-nobody", metavar="REGEXP", help="For successful operation, REGEXP must not be found in the body", default=None)
+cmd.add_argument("-timeout", help="Operation timeout seconds (default is 5m)", default=300, type=int)
 cmd.add_argument("-nameservers", help="Comma separated list of name servers", default=None)
 cmd.add_argument("-4", help="Resolve names to IPv4 only", dest="v4", action="store_true", default=False)
 cmd.add_argument("-6", help="Resolve names to IPv6 only", dest="v6", action="store_true", default=False)
@@ -68,12 +77,28 @@ if args.ca is not None:
 c.setopt(pycurl.TIMEOUT, args.timeout)
 c.setopt(pycurl.WRITEDATA, buffer)
 c.setopt(pycurl.VERBOSE, args.verbose)
-c.perform()
-response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
-                 "type": c.getinfo(pycurl.CONTENT_TYPE)}
-ct_params = cidict(parse_header(response_info["type"])[1]) if response_info["type"] is not None else cidict()
-response_info["charset"] = ct_params["charset"] if "charset" in ct_params else "UTF-8"
-c.close()
+try:
+    c.perform()
+except pycurl.error:
+    print(CURL_FAILED_MESSAGE, end="")
+    exit()
+else:
+    response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
+                     "type": c.getinfo(pycurl.CONTENT_TYPE)}
+    ct_params = cidict(parse_header(response_info["type"])[1]) if response_info["type"] is not None else cidict()
+    response_info["charset"] = ct_params["charset"] if "charset" in ct_params else "UTF-8"
+finally:
+    c.close()
 
-if args.body:
-    print(re.search(args.body, buffer.getvalue().decode(response_info["charset"]), re.I))
+if response_info["code"] >= 400:
+    print(WEBSITE_FAILED_MESSAGE, end="")
+    exit()
+
+if args.body and not re.search(args.body, buffer.getvalue().decode(response_info["charset"]), re.I):
+    print(WEBSITE_FAILED_MESSAGE, end="")
+    exit()
+elif args.nobody and re.search(args.nobody, buffer.getvalue().decode(response_info["charset"]), re.I):
+    print(WEBSITE_FAILED_MESSAGE, end="")
+    exit()
+
+print(OK_MESSAGE, end="")
