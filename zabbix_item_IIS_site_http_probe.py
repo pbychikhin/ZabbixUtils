@@ -14,6 +14,8 @@ from sys import exit
 OK_MESSAGE = "ok"
 CURL_FAILED_MESSAGE = "failed"
 WEBSITE_FAILED_MESSAGE = "problem"
+HTML_DEFAULT_CHARSET = "UTF-8"
+HTML_FALLBACK_CHARSET = "ISO-8859-1"
 
 
 cmd = ArgumentParser(description="Probes a Web site over http(s)")
@@ -86,7 +88,7 @@ else:
     response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
                      "type": c.getinfo(pycurl.CONTENT_TYPE)}
     ct_params = cidict(parse_header(response_info["type"])[1]) if response_info["type"] is not None else cidict()
-    response_info["charset"] = ct_params["charset"] if "charset" in ct_params else "UTF-8"
+    response_info["charset"] = ct_params["charset"] if "charset" in ct_params else HTML_DEFAULT_CHARSET
 finally:
     c.close()
 
@@ -94,10 +96,19 @@ if response_info["code"] >= 400:
     print(WEBSITE_FAILED_MESSAGE, end="")
     exit()
 
-if args.body and not re.search(args.body, buffer.getvalue().decode(response_info["charset"]), re.I):
+try:
+    body = buffer.getvalue().decode(response_info["charset"])
+except UnicodeDecodeError:
+    try:
+        body = buffer.getvalue().decode(HTML_FALLBACK_CHARSET)
+    except ValueError:
+        print(WEBSITE_FAILED_MESSAGE, end="")
+        exit()
+
+if args.body and not re.search(args.body, body, re.I):
     print(WEBSITE_FAILED_MESSAGE, end="")
     exit()
-elif args.nobody and re.search(args.nobody, buffer.getvalue().decode(response_info["charset"]), re.I):
+elif args.nobody and re.search(args.nobody, body, re.I):
     print(WEBSITE_FAILED_MESSAGE, end="")
     exit()
 
