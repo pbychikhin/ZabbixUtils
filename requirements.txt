@@ -1,0 +1,7 @@
+
+# Use 'pip install --upgrade -r requirements.txt'
+# Also download and install pywin32 distribution from https://sourceforge.net/projects/pywin32/files/pywin32/
+
+pycurl
+ldap3
+wmi
