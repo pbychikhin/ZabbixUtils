@@ -4,6 +4,7 @@ import json
 import re
 import types
 import subprocess
+import sys
 from wmi import WMI
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
@@ -84,7 +85,11 @@ sites = []
 if args.method == "wmi":
     sites = [IIS_site_info(site) for site in WMI(namespace=WMI_IIS_NAMESPACE).instances("Site")]
 elif args.method == "ps":
-    cp = subprocess.run(PS_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    if sys.version_info.major > 2 and sys.version_info.minor > 4:
+        cp = subprocess.run(PS_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    else:
+        cp = types.SimpleNamespace()
+        cp.stdout = subprocess.check_output(PS_CMD, stderr=subprocess.DEVNULL)
     try:
         sites = [IIS_site_info_json(cidict(site)) for site in json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii")]
     except json.JSONDecodeError:

@@ -2,6 +2,8 @@
 
 import json
 import subprocess
+import sys
+import types
 from wmi import WMI
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
@@ -29,7 +31,11 @@ if args.method == "wmi":
 elif args.method == "ps":
     try:
         PS_CMD[-1] = PS_CMD[-1].format(args.site)
-        cp = subprocess.run(PS_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        if sys.version_info.major > 2 and sys.version_info.minor > 4:
+            cp = subprocess.run(PS_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        else:
+            cp = types.SimpleNamespace()
+            cp.stdout = subprocess.check_output(PS_CMD, stderr=subprocess.DEVNULL)
         print(cidict(json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii"))["state"].lower(),
               end="")
     except json.JSONDecodeError:
