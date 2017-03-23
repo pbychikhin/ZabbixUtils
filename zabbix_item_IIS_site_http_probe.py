@@ -4,6 +4,9 @@ import pycurl
 import io
 import urllib.parse as up
 import re
+import sys
+import os.path
+import configparser
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 from cgi import parse_header
@@ -14,6 +17,9 @@ from sys import exit
 OK_MESSAGE = "ok"
 CURL_FAILED_MESSAGE = "failed"
 WEBSITE_FAILED_MESSAGE = "problem"
+CFG_READ_ERROR_MESSAGE = "cfg_read_error"
+CFG_PARSE_ERROR_MESSAGE = "cfg_parse_error"
+CFG_OPTION_ERROR_MESSAGE = "cfg_option_error"
 HTML_DEFAULT_CHARSET = "UTF-8"
 HTML_FALLBACK_CHARSET = "ISO-8859-1"
 
@@ -35,6 +41,44 @@ cmd.add_argument("-ca", help="Path to the CA certs bundle file (can be fetched f
                  default=None)
 cmd.add_argument("-v", help="Verbose output (troubleshooting)", dest="verbose", action="store_true", default=False)
 args = cmd.parse_args()
+
+cfg = configparser.ConfigParser()
+try:
+    cfg.read_file(open(os.path.join(
+        os.path.dirname(sys.argv[0]),
+        ".".join([os.path.basename(sys.argv[0]).split(".")[0], "ini"]))))
+except FileNotFoundError:
+    pass
+except OSError:
+    print(CFG_READ_ERROR_MESSAGE, end="")
+    exit()
+except configparser.Error:
+    print(CFG_PARSE_ERROR_MESSAGE, end="")
+    exit()
+else:
+    for section in cfg.sections():
+        try:
+            if args.host.lower() in cfg.get(section, "host").split():
+                for option in cfg.options(section):
+                    if option == "host":
+                        continue
+                    elif option in {"body", "nobody"}:
+                        if cfg.has_option(section, "body") ^ cfg.has_option(section, "nobody"):
+                            args.body = None
+                            args.nobody = None
+                            setattr(args, option, cfg.get(section, option))
+                        else:
+                            print("{}, {}, {}".format(CFG_OPTION_ERROR_MESSAGE, section, option), end="")
+                            exit()
+                    elif option == "timeout":
+                        args.timeout = cfg.getint(section, option)
+                    elif option in {"v4", "v6", "verbose"}:
+                        setattr(args, option, cfg.getboolean(section, option))
+                    else:
+                        setattr(args, option, cfg.get(section, option))
+                break
+        except configparser.NoOptionError:
+            continue
 
 
 class Website:
