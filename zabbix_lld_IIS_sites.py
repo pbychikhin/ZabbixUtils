@@ -99,7 +99,7 @@ zabbix_data = {"data": [{
         "{#SITE_START}": site.get_startuptype(),
         "{#SITE_PROTO}": site.get_pref_binding()["proto"],
         "{#SITE_HOST}": site.get_pref_binding()["host"],
-        "{#SITE_ALL_HOSTS}": ",".join([x["host"] for x in site.get_bindings()]),
+        "{#SITE_ALL_HOSTS}": ",".join(set([x["host"] for x in site.get_bindings()])),
         "{#SITE_PORT}": site.get_pref_binding()["port"],
         "{#SITE_ADDR}": site.get_pref_binding()["addr"]}
                         for site in sites]}
