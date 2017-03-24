@@ -58,7 +58,7 @@ except configparser.Error:
 else:
     for section in cfg.sections():
         try:
-            if args.host.lower() in cfg.get(section, "host").split():
+            if args.host.lower() in [x.strip() for x in re.split("\s*,\s*", cfg.get(section, "host"))]:
                 for option in cfg.options(section):
                     if option == "host":
                         continue

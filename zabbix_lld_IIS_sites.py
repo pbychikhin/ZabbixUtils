@@ -18,7 +18,7 @@ PS_CMD = [
     "-Command", "Get-Website|Select Name,Bindings,ServerAutoStart|ConvertTo-Json -depth 3 -compress"]
 
 cmd = ArgumentParser(description="Discovers sites in local IIS using WMI or PS")
-cmd.add_argument("-prefproto", help="Prefer host records having specific proto", default=IIS_PREF_PROTO)
+cmd.add_argument("-prefproto", help="Prefer host records having specific proto. Default is {}".format(IIS_PREF_PROTO), default=IIS_PREF_PROTO)
 cmd.add_argument("-prefhost", help="Prefer host records having specific text in their names", default=None)
 cmd.add_argument("-method", help="Method of data retrieving", choices=["wmi", "ps"], default="wmi")
 args = cmd.parse_args()
@@ -99,6 +99,7 @@ zabbix_data = {"data": [{
         "{#SITE_START}": site.get_startuptype(),
         "{#SITE_PROTO}": site.get_pref_binding()["proto"],
         "{#SITE_HOST}": site.get_pref_binding()["host"],
+        "{#SITE_ALL_HOSTS}": ",".join([x["host"] for x in site.get_bindings()]),
         "{#SITE_PORT}": site.get_pref_binding()["port"],
         "{#SITE_ADDR}": site.get_pref_binding()["addr"]}
                         for site in sites]}
