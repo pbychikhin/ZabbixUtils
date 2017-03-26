@@ -27,6 +27,11 @@ HTML_FALLBACK_CHARSET = "ISO-8859-1"
 cmd = ArgumentParser(description="Probes a Web site over http(s)")
 cmd.add_argument("-scheme", help="Access scheme (protocol) (http or https)", default="http")
 cmd.add_argument("-host", help="Host name", default="localhost")
+cmd.add_argument("-allhosts",
+                 metavar="NAME1,NAME2...",
+                 help="Comma separated list of all host names of the host to be probed. "
+                      "This list is used when searching in ini file for host-specific settings",
+                 default=None)
 cmd.add_argument("-port", help="Optional TCP port number", default=None)
 cmd.add_argument("-addr", help="Optional IP address to connect to", default=None)
 cmd.add_argument("-path", help="Path component of the URL", default="")
@@ -34,13 +39,14 @@ cmdgroup = cmd.add_mutually_exclusive_group()
 cmdgroup.add_argument("-body", metavar="REGEXP", help="For successful operation, REGEXP must be found in the body", default=None)
 cmdgroup.add_argument("-nobody", metavar="REGEXP", help="For successful operation, REGEXP must not be found in the body", default=None)
 cmd.add_argument("-timeout", help="Operation timeout seconds (default is 5m)", default=300, type=int)
-cmd.add_argument("-nameservers", help="Comma separated list of name servers", default=None)
+cmd.add_argument("-nameservers", metavar="NAME1,NAME2...", help="Comma separated list of name servers", default=None)
 cmd.add_argument("-4", help="Resolve names to IPv4 only", dest="v4", action="store_true", default=False)
 cmd.add_argument("-6", help="Resolve names to IPv6 only", dest="v6", action="store_true", default=False)
 cmd.add_argument("-ca", help="Path to the CA certs bundle file (can be fetched from https://curl.haxx.se/ca/cacert.pem)",
                  default=None)
 cmd.add_argument("-v", help="Verbose output (troubleshooting)", dest="verbose", action="store_true", default=False)
 args = cmd.parse_args()
+args.allhosts = set([x.strip().lower() for x in args.allhosts.split(",")]) if args.allhosts is not None else set()
 
 cfg = configparser.ConfigParser()
 try:
@@ -58,9 +64,9 @@ except configparser.Error:
 else:
     for section in cfg.sections():
         try:
-            if args.host.lower() in [x.strip() for x in re.split("\s*,\s*", cfg.get(section, "host"))]:
+            if args.allhosts & set([x.strip().lower() for x in re.split("\s*,\s*", cfg.get(section, "allhosts"))]):
                 for option in cfg.options(section):
-                    if option == "host":
+                    if option == "allhosts":
                         continue
                     elif option in {"body", "nobody"}:
                         if cfg.has_option(section, "body") ^ cfg.has_option(section, "nobody"):
