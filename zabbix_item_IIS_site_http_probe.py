@@ -98,8 +98,9 @@ class Website:
         self.host = "localhost" if host == "" else host
         self.addr = "127.0.0.1" if addr == "*" else addr
         self.port = port if port is not None else type(self).well_known_ports[scheme]
-        self.path = path
-        self.url = up.urlunparse(up.ParseResult(self.scheme, ":".join([self.host, self.port]), self.path, "", "", ""))
+        self.path = [x for x in re.split("\s*,\s*", path)]
+        self.url = [up.urlunparse(up.ParseResult(self.scheme, ":".join([self.host, self.port]), x, "", "", ""))
+                    for x in self.path]
         self.curl_resolved_host = ":".join([self.host, self.port, self.addr]) if self.addr is not None else None
 
     def get_url(self):
@@ -110,56 +111,58 @@ class Website:
 
 
 w = Website(args.scheme, args.host, args.port, args.addr, args.path)
-buffer = io.BytesIO()
-c = pycurl.Curl()
-c.setopt(pycurl.URL, w.get_url())
-if args.v4 ^ args.v6:
-    if args.v4:
-        c.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V4)
-    elif args.v6:
-        c.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V6)
-else:
-    c.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_WHATEVER)
-if args.nameservers:
-    c.setopt(pycurl.DNS_SERVERS, args.nameservers)
-if w.get_curl_host() is not None:
-    c.setopt(pycurl.RESOLVE, [w.get_curl_host()])
-if args.ca is not None:
-    c.setopt(pycurl.CAINFO, args.ca)
-c.setopt(pycurl.TIMEOUT, args.timeout)
-c.setopt(pycurl.WRITEDATA, buffer)
-c.setopt(pycurl.VERBOSE, args.verbose)
-try:
-    c.perform()
-except pycurl.error:
-    print(CURL_FAILED_MESSAGE, end="")
-    exit()
-else:
-    response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
-                     "type": c.getinfo(pycurl.CONTENT_TYPE)}
-    ct_params = cidict(parse_header(response_info["type"])[1]) if response_info["type"] is not None else cidict()
-    response_info["charset"] = ct_params["charset"] if "charset" in ct_params else HTML_DEFAULT_CHARSET
-finally:
-    c.close()
 
-if response_info["code"] >= 400:
-    print(WEBSITE_FAILED_MESSAGE, end="")
-    exit()
-
-try:
-    body = buffer.getvalue().decode(response_info["charset"])
-except UnicodeDecodeError:
+for url in w.get_url():
+    buffer = io.BytesIO()
+    c = pycurl.Curl()
+    c.setopt(pycurl.URL, url)
+    if args.v4 ^ args.v6:
+        if args.v4:
+            c.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V4)
+        elif args.v6:
+            c.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V6)
+    else:
+        c.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_WHATEVER)
+    if args.nameservers:
+        c.setopt(pycurl.DNS_SERVERS, args.nameservers)
+    if w.get_curl_host() is not None:
+        c.setopt(pycurl.RESOLVE, [w.get_curl_host()])
+    if args.ca is not None:
+        c.setopt(pycurl.CAINFO, args.ca)
+    c.setopt(pycurl.TIMEOUT, args.timeout)
+    c.setopt(pycurl.WRITEDATA, buffer)
+    c.setopt(pycurl.VERBOSE, args.verbose)
     try:
-        body = buffer.getvalue().decode(HTML_FALLBACK_CHARSET)
-    except ValueError:
+        c.perform()
+    except pycurl.error:
+        print(CURL_FAILED_MESSAGE, end="")
+        exit()
+    else:
+        response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
+                         "type": c.getinfo(pycurl.CONTENT_TYPE)}
+        ct_params = cidict(parse_header(response_info["type"])[1]) if response_info["type"] is not None else cidict()
+        response_info["charset"] = ct_params["charset"] if "charset" in ct_params else HTML_DEFAULT_CHARSET
+    finally:
+        c.close()
+
+    if response_info["code"] >= 400:
         print(WEBSITE_FAILED_MESSAGE, end="")
         exit()
 
-if args.body and not re.search(args.body, body, re.I):
-    print(WEBSITE_FAILED_MESSAGE, end="")
-    exit()
-elif args.nobody and re.search(args.nobody, body, re.I):
-    print(WEBSITE_FAILED_MESSAGE, end="")
-    exit()
+    try:
+        body = buffer.getvalue().decode(response_info["charset"])
+    except UnicodeDecodeError:
+        try:
+            body = buffer.getvalue().decode(HTML_FALLBACK_CHARSET)
+        except ValueError:
+            print(WEBSITE_FAILED_MESSAGE, end="")
+            exit()
+
+    if args.body and not re.search(args.body, body, re.I):
+        print(WEBSITE_FAILED_MESSAGE, end="")
+        exit()
+    elif args.nobody and re.search(args.nobody, body, re.I):
+        print(WEBSITE_FAILED_MESSAGE, end="")
+        exit()
 
 print(OK_MESSAGE, end="")
