@@ -7,6 +7,7 @@ import re
 import sys
 import os.path
 import configparser
+import json
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 from cgi import parse_header
@@ -19,9 +20,9 @@ CURL_FAILED_MESSAGE = "failed"
 WEBSITE_FAILED_MESSAGE = "problem"
 CFG_READ_ERROR_MESSAGE = "cfg_read_error"
 CFG_PARSE_ERROR_MESSAGE = "cfg_parse_error"
-CFG_OPTION_ERROR_MESSAGE = "cfg_option_error"
 HTML_DEFAULT_CHARSET = "UTF-8"
 HTML_FALLBACK_CHARSET = "ISO-8859-1"
+ARG_PATH_DEFAULT = '[{"path": "/", "body": null}]'
 
 
 cmd = ArgumentParser(description="Probes a Web site over http(s)")
@@ -34,10 +35,10 @@ cmd.add_argument("-allhosts",
                  default=None)
 cmd.add_argument("-port", help="Optional TCP port number", default=None)
 cmd.add_argument("-addr", help="Optional IP address to connect to", default=None)
-cmd.add_argument("-path", help="Path component of the URL", default="")
-cmdgroup = cmd.add_mutually_exclusive_group()
-cmdgroup.add_argument("-body", metavar="REGEXP", help="For successful operation, REGEXP must be found in the body", default=None)
-cmdgroup.add_argument("-nobody", metavar="REGEXP", help="For successful operation, REGEXP must not be found in the body", default=None)
+cmd.add_argument("-path", help="JSON with an array of path components to be probed with expected body regexps. "
+                               "Body regexp keys are either \"body\" (to be found in the body) or \"nobody\" (not to be found in the body), or both. "
+                               "\"body\" takes precedence over \"nobody\". "
+                               "Default is {}".format(ARG_PATH_DEFAULT), default=ARG_PATH_DEFAULT)
 cmd.add_argument("-timeout", help="Operation timeout seconds (default is 5m)", default=300, type=int)
 cmd.add_argument("-nameservers", metavar="NAME1,NAME2...", help="Comma separated list of name servers", default=None)
 cmd.add_argument("-4", help="Resolve names to IPv4 only", dest="v4", action="store_true", default=False)
@@ -68,14 +69,6 @@ else:
                 for option in cfg.options(section):
                     if option == "allhosts":
                         continue
-                    elif option in {"body", "nobody"}:
-                        if cfg.has_option(section, "body") ^ cfg.has_option(section, "nobody"):
-                            args.body = None
-                            args.nobody = None
-                            setattr(args, option, cfg.get(section, option))
-                        else:
-                            print("{}, {}, {}".format(CFG_OPTION_ERROR_MESSAGE, section, option), end="")
-                            exit()
                     elif option == "timeout":
                         args.timeout = cfg.getint(section, option)
                     elif option in {"v4", "v6", "verbose"}:
@@ -91,16 +84,25 @@ class Website:
 
     well_known_ports = cidict({"http":"80", "https":"443"})
 
-    def __init__(self, scheme="http", host="localhost", port="80", addr="127.0.0.1", path=""):
+    def __init__(self, scheme="http", host="localhost", port="80", addr="127.0.0.1", path='[{"path": "/", "body": null}]'):
         if not re.search("^(http|https)$", scheme, re.I):
             raise RuntimeError("Unknown scheme {}".format(scheme))
         self.scheme = scheme
         self.host = "localhost" if host == "" else host
         self.addr = "127.0.0.1" if addr == "*" else addr
         self.port = port if port is not None else type(self).well_known_ports[scheme]
-        self.path = [x for x in re.split("\s*,\s*", path)]
-        self.url = [up.urlunparse(up.ParseResult(self.scheme, ":".join([self.host, self.port]), x, "", "", ""))
-                    for x in self.path]
+        path = json.loads(path)
+        self.url = []
+        for p in path:
+            if "path" in p:
+                p["path"] = up.urlunparse(up.ParseResult(self.scheme, ":".join([self.host, self.port]), p["path"], "", "", ""))
+            else:
+                p["path"] = up.urlunparse(up.ParseResult(self.scheme, ":".join([self.host, self.port]), "/", "", "", ""))
+            if "body" not in p:
+                p["body"] = None
+            if "nobody" not in p:
+                p["nobody"] = None
+            self.url.append(p)
         self.curl_resolved_host = ":".join([self.host, self.port, self.addr]) if self.addr is not None else None
 
     def get_url(self):
@@ -115,7 +117,7 @@ w = Website(args.scheme, args.host, args.port, args.addr, args.path)
 for url in w.get_url():
     buffer = io.BytesIO()
     c = pycurl.Curl()
-    c.setopt(pycurl.URL, url)
+    c.setopt(pycurl.URL, url["path"])
     if args.v4 ^ args.v6:
         if args.v4:
             c.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V4)
@@ -158,10 +160,10 @@ for url in w.get_url():
             print(WEBSITE_FAILED_MESSAGE, end="")
             exit()
 
-    if args.body and not re.search(args.body, body, re.I):
+    if url["body"] and not re.search(url["body"], body, re.I):
         print(WEBSITE_FAILED_MESSAGE, end="")
         exit()
-    elif args.nobody and re.search(args.nobody, body, re.I):
+    elif url["nobody"] and re.search(url["nobody"], body, re.I):
         print(WEBSITE_FAILED_MESSAGE, end="")
         exit()
 
