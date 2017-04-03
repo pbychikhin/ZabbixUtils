@@ -15,7 +15,7 @@ from sys import exit
 
 
 # Constants
-OK_MESSAGE = "ok"
+OK_MESSAGE = "ok"  # TODO: OK_MESSAGE must be distinct from problem messages. It may be upper case or more complex message than just "ok"
 CURL_FAILED_MESSAGE = "failed"
 WEBSITE_FAILED_MESSAGE = "problem"
 CFG_READ_ERROR_MESSAGE = "cfg_read_error"
