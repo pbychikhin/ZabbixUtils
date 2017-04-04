@@ -23,6 +23,7 @@ CFG_PARSE_ERROR_MESSAGE = "cfg_parse_error"
 HTML_DEFAULT_CHARSET = "UTF-8"
 HTML_FALLBACK_CHARSET = "ISO-8859-1"
 ARG_PATH_DEFAULT = '[{"path": "/", "body": null}]'
+ARG_TIMEOUT_DEFAULT = 300
 
 
 cmd = ArgumentParser(description="Probes a Web site over http(s)")
@@ -39,7 +40,8 @@ cmd.add_argument("-path", help="JSON with an array of path components to be prob
                                "Body regexp keys are either \"body\" (to be found in the body) or \"nobody\" (not to be found in the body), or both. "
                                "\"body\" takes precedence over \"nobody\". "
                                "Default is {}".format(ARG_PATH_DEFAULT), default=ARG_PATH_DEFAULT)
-cmd.add_argument("-timeout", help="Operation timeout seconds (default is 5m)", default=300, type=int)
+cmd.add_argument("-timeout", help="Operation timeout seconds (default is {})".format(ARG_TIMEOUT_DEFAULT),
+                 default=ARG_TIMEOUT_DEFAULT, type=int)
 cmd.add_argument("-nameservers", metavar="NAME1,NAME2...", help="Comma separated list of name servers", default=None)
 cmd.add_argument("-4", help="Resolve names to IPv4 only", dest="v4", action="store_true", default=False)
 cmd.add_argument("-6", help="Resolve names to IPv6 only", dest="v6", action="store_true", default=False)
@@ -112,7 +114,7 @@ class Website:
         return self.curl_resolved_host
 
 
-w = Website(args.scheme, args.host, args.port, args.addr, args.path)
+w = Website(*[getattr(args, attr) for attr in ["scheme", "host", "port", "addr", "path"]])
 
 for url in w.get_url():
     buffer = io.BytesIO()
