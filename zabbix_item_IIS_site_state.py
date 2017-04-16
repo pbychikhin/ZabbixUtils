@@ -8,7 +8,7 @@ from wmi import WMI
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 
-WMI_IIS_NAMESPACE = "root/WebAdministration"
+WMI_IIS_MONIKER = "root/WebAdministration"
 NOTFOUND_MESSAGE = "notfound"
 PS_CMD = [
     "powershell",
@@ -23,7 +23,7 @@ args = cmd.parse_args()
 
 if args.method == "wmi":
     site_states = dict(enumerate(["starting", "started", "stopping", "stopped", "unknown"]))
-    sites = WMI(namespace=WMI_IIS_NAMESPACE).query("SELECT * FROM Site WHERE Name = '{}'".format(args.site))
+    sites = WMI(moniker=WMI_IIS_MONIKER).query("SELECT * FROM Site WHERE Name = '{}'".format(args.site))
     try:
         print(site_states[sites[0].GetState()[0]], end="")
     except IndexError:
