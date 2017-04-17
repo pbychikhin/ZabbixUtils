@@ -15,11 +15,12 @@ from sys import exit
 
 
 # Constants
-OK_MESSAGE = "ok"  # TODO: OK_MESSAGE must be distinct from problem messages. It may be upper case or more complex message than just "ok"
-CURL_FAILED_MESSAGE = "failed"
-WEBSITE_FAILED_MESSAGE = "problem"
-CFG_READ_ERROR_MESSAGE = "cfg_read_error"
-CFG_PARSE_ERROR_MESSAGE = "cfg_parse_error"
+OK_MESSAGE = "STATUS_OK"
+CURL_TIMEOUT_MESSAGE = "STATUS_ERR_TIMEOUT"
+CURL_FAILED_MESSAGE = "STATUS_ERR_FAILED"
+WEBSITE_FAILED_MESSAGE = "STATUS_ERR_WEBAPP_PROBLEM"
+CFG_READ_ERROR_MESSAGE = "STATUS_ERR_CFG_READ"
+CFG_PARSE_ERROR_MESSAGE = "STATUS_ERR_CFG_PARSE"
 HTML_DEFAULT_CHARSET = "UTF-8"
 HTML_FALLBACK_CHARSET = "ISO-8859-1"
 ARG_PATH_DEFAULT = '[{"path": "/", "body": null}]'
@@ -138,8 +139,11 @@ for url in w.get_url():
     c.setopt(pycurl.VERBOSE, args.verbose)
     try:
         c.perform()
-    except pycurl.error:
-        print(CURL_FAILED_MESSAGE, end="")
+    except pycurl.error as curl_error:
+        if curl_error.args[0] == pycurl.E_OPERATION_TIMEDOUT:
+            print(CURL_TIMEOUT_MESSAGE, end="")
+        else:
+            print(CURL_FAILED_MESSAGE, end="")
         exit()
     else:
         response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
