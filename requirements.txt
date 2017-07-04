@@ -6,3 +6,4 @@ pycurl
 ldap3
 six
 pymi
+dnspython
