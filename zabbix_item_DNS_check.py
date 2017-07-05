@@ -19,9 +19,14 @@ args = cmd.parse_args()
 args.servers = args.servers.split()
 
 
-nameservers = ["8.8.8.8", "8.8.4.4"]
+resolver.get_default_resolver().nameservers = args.servers
+resolver.get_default_resolver().lifetime = 10
 
-resolver.get_default_resolver().nameservers = nameservers
-answ = resolver.query("sysonline.com", rdatatype.SOA)
-for rr in answ:
-    print(rr.mname)
+try:
+    resolver.query("sysonline.com", rdatatype.SOA)
+except exception.Timeout:
+    print(DNS_TIMEOUT_MESSAGE, end="")
+except resolver.NXDOMAIN:
+    print(DNS_NOTFOUND_MESSAGE, end="")
+except exception.DNSException:
+    print(DNS_ERROR_MESSAGE, end="")
