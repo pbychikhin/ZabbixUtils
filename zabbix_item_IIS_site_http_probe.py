@@ -13,6 +13,7 @@ from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 from cgi import parse_header
 from sys import exit
 
+FILE_VER = "to_be_filled_by_CI"
 
 # Constants
 OK_MESSAGE = "STATUS_OK"

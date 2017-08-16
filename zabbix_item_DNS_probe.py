@@ -4,6 +4,7 @@ from dns import resolver, rdatatype, exception
 from argparse import ArgumentParser
 from socket import getfqdn
 
+FILE_VER = "to_be_filled_by_CI"
 
 # Constants
 OK_MESSAGE = "STATUS_OK"

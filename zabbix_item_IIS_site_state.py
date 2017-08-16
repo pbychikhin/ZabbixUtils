@@ -8,6 +8,8 @@ from wmi import WMI
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 
+FILE_VER = "to_be_filled_by_CI"
+
 WMI_IIS_MONIKER = "root/WebAdministration"
 NOTFOUND_MESSAGE = "notfound"
 PS_CMD = [
