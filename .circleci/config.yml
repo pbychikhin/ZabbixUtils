@@ -6,8 +6,6 @@ jobs:
     docker:
       - image: centos:7
     environment:
-      GITACCOUNT: pbychikhin
-      PROJECTNAME: utils
       ARTIFACTSDIR: &ARTIFACTSDIR
         artifacts
       MAINFILES: "*.py"
@@ -65,8 +63,8 @@ jobs:
               cp $FILE $ARTIFACTSDIR
             done
             echo "Also archiving everything"
-            FILEDESC[$PROJECTNAME.zip]=$FILEMAXDESC
-            (cd $ARTIFACTSDIR && zip $PROJECTNAME.zip *)
+            FILEDESC[$CIRCLE_PROJECT_REPONAME.zip]=$FILEMAXDESC
+            (cd $ARTIFACTSDIR && zip $CIRCLE_PROJECT_REPONAME.zip *)
             mkdir tmp
             declare -p FILEDESC FILEMAXDESC FILEMAXREV > tmp/vars
       - deploy:
@@ -77,5 +75,5 @@ jobs:
             for FILE in $ARTIFACTSDIR/*
             do
               echo "Uploading $FILE, version is ${FILEDESC[$(basename $FILE)]}"
-              $GOBIN/gothub upload -u $GITACCOUNT -r $PROJECTNAME -t $TAG -f $FILE -n $(basename $FILE) -R -l "$(basename $FILE) (${FILEDESC[$(basename $FILE)]})"
+              $GOBIN/gothub upload -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -t $TAG -f $FILE -n $(basename $FILE) -R -l "$(basename $FILE) (${FILEDESC[$(basename $FILE)]})"
             done
