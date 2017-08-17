@@ -18,10 +18,18 @@ PS_CMD = [
     "-ExecutionPolicy", "Bypass",
     "-Command", "Get-Website -Name \"{}\"|Select State|ConvertTo-Json -compress"]
 
+cmd0 = ArgumentParser(add_help=False)
+cmd0.add_argument("-version", action="store_true", default=False)
+(cmd0_namespace, cmd0_args) = cmd0.parse_known_args()
+if cmd0_namespace.version:
+    print(FILE_VER)
+    sys.exit()
+
 cmd = ArgumentParser(description="Retrieves the state of a local IIS site using WMI or PS")
 cmd.add_argument("-site", help="Site name", required=True)
 cmd.add_argument("-method", help="Method of data retrieving", choices=["wmi", "ps"], default="wmi")
-args = cmd.parse_args()
+cmd.add_argument("-version", help="Print version and exit", action="store_true", default=False)
+args = cmd.parse_args(cmd0_args)
 
 if args.method == "wmi":
     site_states = dict(enumerate(["starting", "started", "stopping", "stopped", "unknown"]))

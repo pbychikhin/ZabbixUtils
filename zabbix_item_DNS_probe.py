@@ -1,5 +1,6 @@
 
 
+import sys
 from dns import resolver, rdatatype, exception
 from argparse import ArgumentParser
 from socket import getfqdn
@@ -26,7 +27,13 @@ cmd = ArgumentParser(description="Probes a DNS server by requesting the SOA reco
 cmd.add_argument("-name", help="Name to resolve. Default is the local host's domain", default=getfqdn().split(".", 1)[-1])
 cmd.add_argument("-servers", help="Space separated list of name servers. Default is 127.0.0.1", default="127.0.0.1")
 cmd.add_argument("-v", help="Verbose messaging", action="store_true", default=False)
+cmd.add_argument("-version", help="Print version and exit", action="store_true", default=False)
 args = cmd.parse_args()
+
+if args.version:
+    print(FILE_VER)
+    sys.exit()
+
 args.servers = args.servers.split()
 vmsg = verbose(args.v)
 

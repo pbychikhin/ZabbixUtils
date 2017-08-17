@@ -23,7 +23,12 @@ cmd = ArgumentParser(description="Discovers sites in local IIS using WMI or PS")
 cmd.add_argument("-prefproto", help="Prefer host records having specific proto. Default is {}".format(IIS_PREF_PROTO), default=IIS_PREF_PROTO)
 cmd.add_argument("-prefhost", help="Prefer host records having specific text in their names", default=None)
 cmd.add_argument("-method", help="Method of data retrieving", choices=["wmi", "ps"], default="wmi")
+cmd.add_argument("-version", help="Print version and exit", action="store_true", default=False)
 args = cmd.parse_args()
+
+if args.version:
+    print(FILE_VER)
+    sys.exit()
 
 
 class IIS_site_info:

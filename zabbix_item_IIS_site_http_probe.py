@@ -50,7 +50,13 @@ cmd.add_argument("-6", help="Resolve names to IPv6 only", dest="v6", action="sto
 cmd.add_argument("-ca", help="Path to the CA certs bundle file (can be fetched from https://curl.haxx.se/ca/cacert.pem)",
                  default=None)
 cmd.add_argument("-v", help="Verbose output (troubleshooting)", dest="verbose", action="store_true", default=False)
+cmd.add_argument("-version", help="Print version and exit", action="store_true", default=False)
 args = cmd.parse_args()
+
+if args.version:
+    print(FILE_VER)
+    sys.exit()
+
 args.allhosts = set([x.strip().lower() for x in args.allhosts.split(",")]) if args.allhosts is not None else set()
 
 cfg = configparser.ConfigParser()
