@@ -42,7 +42,7 @@ jobs:
             get_file_info()
               {
               DESC=$(git describe --long $(git log -n 1 --pretty=%H $1))
-              NUM=$(($(echo $DESC|cut -d - -f 1|tr -d .) * $(echo $DESC|cut -d - -f 2)))
+              NUM=$(($(echo $DESC|cut -d - -f 1|tr -d .) * $(($(echo $DESC|cut -d - -f 2) + 1))))
               FILEDESC[$1]=$DESC
               if [ $NUM -gt $FILEMAXREV ]
               then
