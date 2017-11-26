@@ -13,7 +13,7 @@ from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 from cgi import parse_header
 from sys import exit
 
-FILE_VER = "to_be_filled_by_CI"
+_FILE_VER = "to_be_filled_by_CI"
 
 # Constants
 OK_MESSAGE = "STATUS_OK"
@@ -54,7 +54,7 @@ cmd.add_argument("-version", help="Print version and exit", action="store_true",
 args = cmd.parse_args()
 
 if args.version:
-    print(FILE_VER)
+    print(_FILE_VER)
     sys.exit()
 
 args.allhosts = set([x.strip().lower() for x in args.allhosts.split(",")]) if args.allhosts is not None else set()

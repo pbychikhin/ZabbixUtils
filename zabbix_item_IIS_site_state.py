@@ -8,7 +8,7 @@ from wmi import WMI
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 
-FILE_VER = "to_be_filled_by_CI"
+_FILE_VER = "to_be_filled_by_CI"
 
 WMI_IIS_MONIKER = "root/WebAdministration"
 NOTFOUND_MESSAGE = "notfound"
@@ -22,7 +22,7 @@ cmd0 = ArgumentParser(add_help=False)
 cmd0.add_argument("-version", action="store_true", default=False)
 (cmd0_namespace, cmd0_args) = cmd0.parse_known_args()
 if cmd0_namespace.version:
-    print(FILE_VER)
+    print(_FILE_VER)
     sys.exit()
 
 cmd = ArgumentParser(description="Retrieves the state of a local IIS site using WMI or PS")

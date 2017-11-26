@@ -9,7 +9,7 @@ from wmi import WMI
 from argparse import ArgumentParser
 from ldap3.utils.ciDict import CaseInsensitiveDict as cidict
 
-FILE_VER = "to_be_filled_by_CI"
+_FILE_VER = "to_be_filled_by_CI"
 
 WMI_IIS_MONIKER = "root/WebAdministration"
 IIS_PREF_PROTO = "https"
@@ -27,7 +27,7 @@ cmd.add_argument("-version", help="Print version and exit", action="store_true",
 args = cmd.parse_args()
 
 if args.version:
-    print(FILE_VER)
+    print(_FILE_VER)
     sys.exit()
 
 

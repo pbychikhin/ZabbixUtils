@@ -42,7 +42,7 @@ jobs:
             get_file_info()
               {
               DESC=$(git describe $(git log -n 1 --pretty=%H $1))
-              NUM=$(echo $DESC|cut -d - -f 2)
+              NUM=$(($(echo $DESC|cut -d - -f 1|tr -d .) * $(echo $DESC|cut -d - -f 2)))
               FILEDESC[$1]=$DESC
               if [ $NUM -gt $FILEMAXREV ]
               then
@@ -54,7 +54,7 @@ jobs:
             do
               echo "Processing main file $FILE"
               get_file_info $FILE
-              sed "s/^FILE_VER\s*=\s*\"to_be_filled_by_CI\"/FILE_VER = \"${FILEDESC[$FILE]}\"/" $FILE > $ARTIFACTSDIR/$FILE
+              sed "s/^_FILE_VER\s*=\s*\"to_be_filled_by_CI\"/_FILE_VER = \"${FILEDESC[$FILE]}\"/" $FILE > $ARTIFACTSDIR/$FILE
             done
             for FILE in $AUXFILES
             do
@@ -66,7 +66,7 @@ jobs:
             FILEDESC[$CIRCLE_PROJECT_REPONAME.zip]=$FILEMAXDESC
             (cd $ARTIFACTSDIR && zip $CIRCLE_PROJECT_REPONAME.zip *)
             mkdir tmp
-            declare -p FILEDESC FILEMAXDESC FILEMAXREV > tmp/vars
+            declare -p FILEDESC FILEMAXDESC > tmp/vars
       - deploy:
           name: Upload to Github
           command: |
