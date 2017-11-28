@@ -1,0 +1,94 @@
+
+# This is sample configuration file for zabbix_IIS_checker.py.
+# If not given explicitly or the application is running in service mode, it searches for configuration file
+# with the name the same as its own with "ini" extension.
+# The setting below are shown with their default values.
+
+
+# The global section with application-wide settings.
+[_appglobal]
+
+# Sender type. May be "print" or "send".
+# The first one prints data to stdout, the second sends it to the Zabbix server over the network.
+#sender_type=print
+
+# Zabbix server name or IP address for "send" sender type.
+#zbx_srv=127.0.0.1
+
+# Zabbix server port.
+#zbx_port=10051
+
+# Zabbix host (mandatory) - the monitored host in Zabbix database.
+zbx_host=
+
+# Interval of checks.
+#interval=300
+
+# IIS sites discovery method. May be "wmi" or "ps" (powershell).
+#discovery_method=ps
+
+# Preferred protocol for the Discoverer to return when multiple protocols configured for an IIS site.
+#discovery_prefproto=https
+
+# Preferred host name (regexp) for the Discoverer to return when multiple host names configured for an IIS site.
+# By default, no preference exists.
+#discovery_prefhost=
+
+# Site state check method. May be "wmi" or "ps" (powershell).
+#check_method=ps
+
+# Log file name. May be full path or just a file name in the application directory.
+# By default, no file name set so log is performed to the stdout.
+#logfile=
+
+# Log verbosity level.
+#loglevel=WARNING
+
+
+# The settings that will apply to any site by default
+[_defaulthost]
+
+# JSON with an array of path components to be probed with expected body regexps.
+# Body regexp keys are either "body" (to be found in the body) or "nobody" (not to be found in the body), or both.
+# "body" takes precedence over "nobody".
+#path=[{"path": "/", "body": null}]
+
+# HTTP probe timeout (seconds)
+#timeout=300
+
+# Random delay (seconds) between 0 and the value specified, which is issued before performig check/probe.
+#delay=30
+
+# Comma-separated list of nameservers. No spaces allowed between between server addresses.
+# If not set, system list will be used.
+#nameservers=
+
+# IP protocols to be requested by resolver (IPv4 or IPv6). If not set or both are set, both have chances to be used.
+# If only one is set, this protocol will be used.
+# DNS cache will be prepopulated with host addresses from IIS config, so this option doesn't make a lot of sense.
+#v4=no
+#v6=no
+
+# Full path to the CA bundle. This bundle can be downloaded from https://curl.haxx.se/ca/cacert.pem
+# By default none is set and TLS (HTTPS) probe will fail.
+#ca=
+
+# Make Curl verbose
+#verbose=no
+
+
+# Site definitions specific to some set of IIS sites (one or more depending on host name)
+# The section name may be an arbitrary string (host1 in this example)
+#[host1]
+
+# Comma separated list of host names the settings from this host definition will apply to.
+# This is not a mandatory parameter. The host definition will be skipped if this parameter is not set.
+#allhosts=name1.somedomain.tld, name2.somedomain.tld
+
+# The rest of settings are are the same as in _defaulthost section and override them if host name match is found.
+
+
+# Multiple hosts may be defined. Order they are searched in is not defined.
+#[host2]
+#...
+#[hostN]

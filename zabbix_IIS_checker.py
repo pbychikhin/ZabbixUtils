@@ -387,16 +387,17 @@ class Checker(Utils):
             :param skipsections: a set of section names that are irrelevant to the Checker and have to be skipped
             """
             self._defaults = types.SimpleNamespace()
-            self._defaults.scheme = "http"
-            self._defaults.host = "localhost"
-            self._defaults.port = None
-            self._defaults.addr = None
+            self._defaults.scheme = "http"     # TODO: seems useless, try to remove
+            self._defaults.host = "localhost"  # TODO: seems useless, try to remove
+            self._defaults.port = None         # TODO: seems useless, try to remove
+            self._defaults.addr = None         # TODO: seems useless, try to remove
             self._defaults.path = '[{"path": "/", "body": null}]'
             self._defaults.timeout = 300
             self._defaults.delay = 30
             self._defaults.nameservers = None
             self._defaults.v4 = False
             self._defaults.v6 = False
+            # TODO: ca is the subject for processing with Utils.make_filename
             self._defaults.ca = None  # CA bundle (file name)
             self._defaults.verbose = False  # make Curl verbose and log its output
             self._sites = dict()
