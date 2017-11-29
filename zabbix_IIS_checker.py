@@ -716,7 +716,7 @@ class CheckerService(win32serviceutil.ServiceFramework, Utils):
             logging.critical("Could not parse config file", exc_info=True)
             exit(1)
 
-        self.interval = self.cfg.getint(section="_appglobal", option="interval", fallback=type(self._DEFAULT_INTERVAL))  # IIS checking interval
+        self.interval = self.cfg.getint(section="_appglobal", option="interval", fallback=type(self)._DEFAULT_INTERVAL)  # IIS checking interval
 
         log_params = dict()  # logging module parameters
         if self.cfg.has_option(section="_appglobal", option="logfile"):
