@@ -562,37 +562,40 @@ class Checker(Utils):
 
             c.setopt(pycurl.VERBOSE, siteconfig.verbose)
             c.setopt(pycurl.DEBUGFUNCTION, curl_debugfunction)
-        for url in w.get_url():
-            buffer = io.BytesIO()
-            c.setopt(pycurl.WRITEDATA, buffer)
-            c.setopt(pycurl.URL, url["path"])
-            try:
-                c.perform()
-            except pycurl.error as curl_error:
-                if curl_error.args[0] == pycurl.E_OPERATION_TIMEDOUT:
-                    return siteobj.get_name(), zbx_key, CURL_TIMEOUT_MESSAGE, curl_debug_buf
-                else:
-                    return siteobj.get_name(), zbx_key, CURL_FAILED_MESSAGE, curl_debug_buf
-            else:
-                response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
-                                 "type": c.getinfo(pycurl.CONTENT_TYPE)}
-                ct_params = cidict(cgi.parse_header(response_info["type"])[1]) if response_info["type"] is not None else cidict()
-                response_info["charset"] = ct_params["charset"] if "charset" in ct_params else HTML_DEFAULT_CHARSET
-            finally:
-                c.close()
-            if response_info["code"] >= 400:
-                return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
-            try:
-                body = buffer.getvalue().decode(response_info["charset"])
-            except UnicodeDecodeError:
+        try:
+            for url in w.get_url():
+                logging.debug("Probing URL {}".format(url["path"]))
+                buffer = io.BytesIO()
+                c.setopt(pycurl.WRITEDATA, buffer)
+                c.setopt(pycurl.URL, url["path"])
                 try:
-                    body = buffer.getvalue().decode(HTML_FALLBACK_CHARSET)
-                except ValueError:
+                    c.perform()
+                except pycurl.error as curl_error:
+                    if curl_error.args[0] == pycurl.E_OPERATION_TIMEDOUT:
+                        return siteobj.get_name(), zbx_key, CURL_TIMEOUT_MESSAGE, curl_debug_buf
+                    else:
+                        logging.debug("CURL failed: {}".format(curl_error))
+                        return siteobj.get_name(), zbx_key, CURL_FAILED_MESSAGE, curl_debug_buf
+                else:
+                    response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
+                                     "type": c.getinfo(pycurl.CONTENT_TYPE)}
+                    ct_params = cidict(cgi.parse_header(response_info["type"])[1]) if response_info["type"] is not None else cidict()
+                    response_info["charset"] = ct_params["charset"] if "charset" in ct_params else HTML_DEFAULT_CHARSET
+                if response_info["code"] >= 400:
                     return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
-            if url["body"] and not re.search(url["body"], body, re.I):
-                return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
-            elif url["nobody"] and re.search(url["nobody"], body, re.I):
-                return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
+                try:
+                    body = buffer.getvalue().decode(response_info["charset"])
+                except UnicodeDecodeError:
+                    try:
+                        body = buffer.getvalue().decode(HTML_FALLBACK_CHARSET)
+                    except ValueError:
+                        return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
+                if url["body"] and not re.search(url["body"], body, re.I):
+                    return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
+                elif url["nobody"] and re.search(url["nobody"], body, re.I):
+                    return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
+        finally:
+            c.close()
         return siteobj.get_name(), zbx_key, OK_MESSAGE, curl_debug_buf
 
     _allowed_methods = {"wmi", "ps"}
