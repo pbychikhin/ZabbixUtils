@@ -1,0 +1,6 @@
+1.2
+- Removed separate IIS checker scripts:
+   - zabbix_item_IIS_site_http_probe.py,
+   - zabbix_item_IIS_site_state.py,
+   - zabbix_lld_IIS_sites.py.
+  They all are now replaced with zabbix_IIS_checker.py.
