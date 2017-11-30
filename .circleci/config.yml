@@ -13,6 +13,7 @@ jobs:
         cacert.pem
         requirements.txt
         zabbix_IIS_checker.ini.txt
+        changelog.txt
       GOPATH: "/GO"
       GOBIN: "/GO/bin"
     branches:
