@@ -166,7 +166,9 @@ class Sender(Utils):
             if msg.process_data[0]:
                 if self.sender_type == "print":
                     for data in msg.process_data[1]:
-                        if len(data) == 4 and isinstance(data[3], io.BytesIO):
+                        logging.debug("Got message: {}".format(data))
+                        if len(data) >= 4 and isinstance(data[3], io.BytesIO):
+                            logging.debug("Got buffer: {}".format(data[3].getvalue().decode("ASCII", errors="ignore")))
                             print(data[0:3])
                             print(data[3].getvalue().decode("ASCII", errors="ignore"))  # "ignore" might not be the best handler
                         else:
@@ -174,6 +176,9 @@ class Sender(Utils):
                 elif self.sender_type == "send":
                     zbx_packet = list()
                     for data in msg.process_data[1]:
+                        logging.debug("Got message: {}".format(data))
+                        if len(data) >= 4 and isinstance(data[3], io.BytesIO):
+                            logging.debug("Got buffer: {}".format(data[3].getvalue().decode("ASCII", errors="ignore")))
                         zbx_packet.append(pyzabbix.ZabbixMetric(self.zbx_host, data[1], data[2]))  # data[1] is Zabbis key and data[2] is Zabbix value,
                                                                                                    # data[0] is an IIS site name and data[3] is optional info (verbose Curl output)
                     pyzabbix.ZabbixSender(self.zbx_srv, self.zbx_port).send(zbx_packet)
@@ -342,6 +347,8 @@ class Discoverer(Utils):
 
 
 class Checker(Utils):
+
+    _MAX_WORKERS = 10
 
 
     class _Website:
@@ -572,10 +579,9 @@ class Checker(Utils):
                     c.perform()
                 except pycurl.error as curl_error:
                     if curl_error.args[0] == pycurl.E_OPERATION_TIMEDOUT:
-                        return siteobj.get_name(), zbx_key, CURL_TIMEOUT_MESSAGE, curl_debug_buf
+                        return siteobj.get_name(), zbx_key, CURL_TIMEOUT_MESSAGE, curl_debug_buf, curl_error
                     else:
-                        logging.debug("CURL failed: {}".format(curl_error))
-                        return siteobj.get_name(), zbx_key, CURL_FAILED_MESSAGE, curl_debug_buf
+                        return siteobj.get_name(), zbx_key, CURL_FAILED_MESSAGE, curl_debug_buf, curl_error
                 else:
                     response_info = {"code": c.getinfo(pycurl.RESPONSE_CODE),
                                      "type": c.getinfo(pycurl.CONTENT_TYPE)}
@@ -632,7 +638,7 @@ class Checker(Utils):
                     data_to_send = list()
                     sites_started = set()
                     good = True
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=len(self._IIS_sites.get())) as executor:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(type(self)._MAX_WORKERS, len(self._IIS_sites.get()))) as executor:
                         for state_info in executor.map(self.get_site_state,
                                                        (site.get_name() for site in self._IIS_sites.get()),
                                                        itertools.repeat(self._method, len(self._IIS_sites.get()))):
@@ -650,7 +656,7 @@ class Checker(Utils):
                         logging.info("Probing sites")
                         time.sleep(5)  # give some time for dust to settle
                         data_to_send = list()
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=len(sites_started)) as executor:
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=min(type(self)._MAX_WORKERS, len(sites_started))) as executor:
                             for probe_info in executor.map(self.get_site_probe, (site for site in self._IIS_sites.get() if site.get_name() in sites_started)):
                                 data_to_send.append(probe_info)
                         self._sq.put_nowait(Message().send_process_data(data_to_send))
