@@ -471,7 +471,7 @@ class Checker(Utils):
             "-Command", "Get-Website -Name \"{}\"|Select State|ConvertTo-Json -compress"]
         siteconfig = self._cfg.get({name.lower()})
         time.sleep(random.randint(0, siteconfig.delay))
-        logging.debug("Getting site state using {} method".format(method))
+        logging.debug("Getting state of {} ({} method)".format(name, method))
         if method == "wmi":
             site_states = dict(enumerate(["starting", "started", "stopping", "stopped", "unknown"]))
             good = False
