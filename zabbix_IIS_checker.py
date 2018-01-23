@@ -348,8 +348,6 @@ class Discoverer(Utils):
 
 class Checker(Utils):
 
-    _MAX_WORKERS = 10
-
 
     class _Website:
 
@@ -606,7 +604,7 @@ class Checker(Utils):
 
     _allowed_methods = {"wmi", "ps"}
 
-    def __init__(self, q, sq, dq, evt_discovery_done, IIS_sites, iniobj, method="ps"):
+    def __init__(self, q, sq, dq, evt_discovery_done, IIS_sites, iniobj, method="ps", max_workers=10):
         """
         :param q: command queue
         :param sq: Sender's command queue
@@ -615,6 +613,7 @@ class Checker(Utils):
         :param IIS_sites: a WrappedList's instance holding a list of IIS sites filled by Discoverer
         :param iniobj: a parsed ini-file object
         :param method: a method of fetching data about IIS, may be "wmi" or "ps"
+        :param max_workers: max number of workers in a pool. High values may cause check timeouts due to the cost of fork
         """
         self.validate_value(method, type(self)._allowed_methods, "getting state method")
         self._q = q
@@ -624,6 +623,7 @@ class Checker(Utils):
         self._IIS_sites = IIS_sites
         self._cfg = self._Config(iniobj, {"_appglobal"})
         self._method = method
+        self._max_workers = max_workers
 
     def run(self):
         self._sq.put_nowait(Message().send_register_client(threading.current_thread().name))
@@ -638,7 +638,9 @@ class Checker(Utils):
                     data_to_send = list()
                     sites_started = set()
                     good = True
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(type(self)._MAX_WORKERS, len(self._IIS_sites.get()))) as executor:
+                    num_workers = min(self._max_workers, len(self._IIS_sites.get()))
+                    logging.debug("Fetching sites states using no more than {} worker(s)".format(num_workers))
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
                         for state_info in executor.map(self.get_site_state,
                                                        (site.get_name() for site in self._IIS_sites.get()),
                                                        itertools.repeat(self._method, len(self._IIS_sites.get()))):
@@ -656,7 +658,9 @@ class Checker(Utils):
                         logging.info("Probing sites")
                         time.sleep(5)  # give some time for dust to settle
                         data_to_send = list()
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=min(type(self)._MAX_WORKERS, len(sites_started))) as executor:
+                        num_workers = min(self._max_workers, len(sites_started))
+                        logging.debug("Probing sites using no more than {} worker(s)".format(num_workers))
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
                             for probe_info in executor.map(self.get_site_probe, (site for site in self._IIS_sites.get() if site.get_name() in sites_started)):
                                 data_to_send.append(probe_info)
                         self._sq.put_nowait(Message().send_process_data(data_to_send))
@@ -761,6 +765,8 @@ class CheckerService(win32serviceutil.ServiceFramework, Utils):
         self.checker_params = dict()
         if self.cfg.has_option("_appglobal", "check_method"):
             self.checker_params["method"] = self.cfg.get("_appglobal", "check_method")
+        if self.cfg.has_option("_appglobal", "max_workers"):
+            self.checker_params["max_workers"] = self.cfg.getint("_appglobal", "max_workers")
 
         self.qsender = queue.Queue()  # Sender's queue
         self.qdiscoverer = queue.Queue()  # Discoverer's queue
