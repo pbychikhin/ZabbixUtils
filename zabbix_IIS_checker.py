@@ -204,24 +204,28 @@ class IIS_site_info:
         self.autostart = site_instance.ServerAutoStart
         self.bindings = []
         self.pref_binding = None
-        pref_binding_found_both = False
-        pref_binding_found_host = False
+        binding_max_score = 0
         for b in site_instance.Bindings:
             binding = dict(zip(["addr", "port", "host"], b.BindingInformation.split(":")), proto=b.protocol)
-            found_host, found_proto = False, False
+            found_prefhost, found_nonblankhost, found_prefproto = False, False, False
+            binding_score = 0
             if prefhost and re.search(re.escape(prefhost), binding["host"], re.I):
-                found_host = True
+                found_prefhost = True
+            if binding["host"] != "":
+                found_nonblankhost = True
             if re.search("^{}$".format(prefproto), binding["proto"], re.I):
-                found_proto = True
-            if not pref_binding_found_both and found_host and found_proto:
+                found_prefproto = True
+            if found_prefhost and found_prefproto:
+                binding_score = 100
+            elif found_prefhost:
+                binding_score = 90
+            elif found_nonblankhost and found_prefproto:
+                binding_score = 80
+            elif found_prefproto:
+                binding_score = 70
+            if binding_score > binding_max_score:
+                binding_max_score = binding_score
                 self.pref_binding = binding
-                pref_binding_found_both = True
-            else:
-                if found_host:
-                    self.pref_binding = binding
-                    pref_binding_found_host = True
-                elif not pref_binding_found_host and found_proto:
-                    self.pref_binding = binding
             self.bindings.append(binding)
         if self.pref_binding is None:
             self.pref_binding = self.bindings[-1]
