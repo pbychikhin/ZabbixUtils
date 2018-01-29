@@ -4,3 +4,9 @@
    - zabbix_item_IIS_site_state.py,
    - zabbix_lld_IIS_sites.py.
   They all are now replaced with zabbix_IIS_checker.py.
+- Added Zabbix_Templates.xml:
+   - the template for IIS checker (Template Microsoft IIS Sites). Agent's configuration must contain:
+     UserParameter=iis.site.discovery,py -3 C:\zabbix_agents\py_scripts\zabbix_IIS_checker.py -discover -configfile zabbix_IIS_discoverer.ini
+   - the template for DNS server checker (Template Windows 2008 R2 DNS Server - Custom Items). Agent's configuration must contain:
+     UserParameter=dnsserver.probe[*],py -3 C:\zabbix_agents\py_scripts\zabbix_item_DNS_probe.py -name "$1"
+     Also {$DOMAIN_TO_RESOLVE} macro should be defined.
