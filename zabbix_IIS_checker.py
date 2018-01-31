@@ -523,6 +523,7 @@ class Checker(Utils):
         OK_MESSAGE = "STATUS_OK"
         CURL_TIMEOUT_MESSAGE = "STATUS_ERR_TIMEOUT"
         CURL_FAILED_MESSAGE = "STATUS_ERR_FAILED"
+        WEBSITE_AUTH_REQUIRED_MESSAGE = "STATUS_ERR_AUTH_REQUIRED"
         WEBSITE_FAILED_MESSAGE = "STATUS_ERR_WEBAPP_PROBLEM"
         HTML_DEFAULT_CHARSET = "UTF-8"
         HTML_FALLBACK_CHARSET = "ISO-8859-1"
@@ -589,6 +590,8 @@ class Checker(Utils):
                                      "type": c.getinfo(pycurl.CONTENT_TYPE)}
                     ct_params = cidict(cgi.parse_header(response_info["type"])[1]) if response_info["type"] is not None else cidict()
                     response_info["charset"] = ct_params["charset"] if "charset" in ct_params else HTML_DEFAULT_CHARSET
+                if response_info["code"] == 401:
+                    return siteobj.get_name(), zbx_key, WEBSITE_AUTH_REQUIRED_MESSAGE, curl_debug_buf
                 if response_info["code"] >= 400:
                     return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
                 try:
