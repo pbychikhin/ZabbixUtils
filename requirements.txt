@@ -1,6 +1,6 @@
 
 # Use 'pip3 install --upgrade -r requirements.txt'
-# Also download and install pywin32 distribution from https://sourceforge.net/projects/pywin32/files/pywin32/
+# Also download and install pywin32 distribution from https://github.com/mhammond/pywin32/releases
 # cacert.pem has been downloaded from https://curl.haxx.se/ca/cacert.pem
 
 pycurl
