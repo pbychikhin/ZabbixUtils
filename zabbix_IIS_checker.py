@@ -181,7 +181,21 @@ class Sender(Utils):
                             logging.debug("Got buffer: {}".format(data[3].getvalue().decode("ASCII", errors="ignore")))
                         zbx_packet.append(pyzabbix.ZabbixMetric(self.zbx_host, data[1], data[2]))  # data[1] is Zabbis key and data[2] is Zabbix value,
                                                                                                    # data[0] is an IIS site name and data[3] is optional info (verbose Curl output)
-                    pyzabbix.ZabbixSender(self.zbx_srv, self.zbx_port).send(zbx_packet)
+                    sent = False
+                    retry_counter = 0
+                    for retry_timer in _RETRY_TIMERS:
+                        try:
+                            retry_counter += 1
+                            pyzabbix.ZabbixSender(self.zbx_srv, self.zbx_port).send(zbx_packet)
+                        except Exception:
+                            logging.exception("Couldn't send data")
+                            logging.info("Re-trying in {} secs".format(retry_timer))
+                            time.sleep(retry_timer)
+                        else:
+                            sent = True
+                            break
+                    if not sent:
+                        logging.warning("The data was not sent after {} tries".format(retry_counter))
             elif msg.register_client[0]:
                 clients.add(msg.register_client[1])
             elif msg.deregister_client[0]:
