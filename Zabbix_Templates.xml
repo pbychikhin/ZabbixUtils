@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>3.2</version>
-    <date>2018-01-29T14:04:11Z</date>
+    <date>2018-02-09T13:09:40Z</date>
     <groups>
         <group>
             <name>Templates</name>
@@ -22,7 +22,52 @@
                     <name>IIS Site</name>
                 </application>
             </applications>
-            <items/>
+            <items>
+                <item>
+                    <name>Pulse</name>
+                    <type>2</type>
+                    <snmp_community/>
+                    <multiplier>0</multiplier>
+                    <snmp_oid/>
+                    <key>iis.site.pulse</key>
+                    <delay>0</delay>
+                    <history>1</history>
+                    <trends>0</trends>
+                    <status>0</status>
+                    <value_type>3</value_type>
+                    <allowed_hosts/>
+                    <units/>
+                    <delta>0</delta>
+                    <snmpv3_contextname/>
+                    <snmpv3_securityname/>
+                    <snmpv3_securitylevel>0</snmpv3_securitylevel>
+                    <snmpv3_authprotocol>0</snmpv3_authprotocol>
+                    <snmpv3_authpassphrase/>
+                    <snmpv3_privprotocol>0</snmpv3_privprotocol>
+                    <snmpv3_privpassphrase/>
+                    <formula>1</formula>
+                    <delay_flex/>
+                    <params/>
+                    <ipmi_sensor/>
+                    <data_type>0</data_type>
+                    <authtype>0</authtype>
+                    <username/>
+                    <password/>
+                    <publickey/>
+                    <privatekey/>
+                    <port/>
+                    <description>IIS Site Checker should be sending a periodical pulse.&#13;
+If a pulse is not received during some period of time, that means a network issue exists or the checker service is down. The rest of triggers don't make sense in that case, so they are dependent on pulse.</description>
+                    <inventory_link>0</inventory_link>
+                    <applications>
+                        <application>
+                            <name>IIS Site</name>
+                        </application>
+                    </applications>
+                    <valuemap/>
+                    <logtimefmt/>
+                </item>
+            </items>
             <discovery_rules>
                 <discovery_rule>
                     <name>IIS Site</name>
@@ -186,10 +231,10 @@
                             <tags/>
                         </trigger_prototype>
                         <trigger_prototype>
-                            <expression>{Template Microsoft IIS Sites:iis.site.state[{#SITE_NAME}].nodata(15m)}=1</expression>
+                            <expression>{Template Microsoft IIS Sites:iis.site.probe[{#SITE_PROTO},{#SITE_HOST},{#SITE_PORT},{#SITE_ADDR},{#SITE_ALL_HOSTS}].nodata(16m)}=1</expression>
                             <recovery_mode>0</recovery_mode>
                             <recovery_expression/>
-                            <name>No state data on IIS Site {#SITE_NAME} for 15 minutes</name>
+                            <name>No probe data on IIS Site {#SITE_NAME} for 16 minutes</name>
                             <correlation_mode>0</correlation_mode>
                             <correlation_tag/>
                             <url/>
@@ -200,8 +245,35 @@
                             <manual_close>0</manual_close>
                             <dependencies>
                                 <dependency>
-                                    <name>Zabbix agent on {HOST.NAME} is unreachable for 5 minutes</name>
-                                    <expression>{Template OS Windows:agent.ping.nodata(5m)}=1</expression>
+                                    <name>IIS Site {#SITE_NAME} is not started</name>
+                                    <expression>{Template Microsoft IIS Sites:iis.site.state[{#SITE_NAME}].str(started)}=0</expression>
+                                    <recovery_expression/>
+                                </dependency>
+                                <dependency>
+                                    <name>No pulse from IIS Site checker for 15 minutes</name>
+                                    <expression>{Template Microsoft IIS Sites:iis.site.pulse.nodata(15m)}=1</expression>
+                                    <recovery_expression/>
+                                </dependency>
+                            </dependencies>
+                            <tags/>
+                        </trigger_prototype>
+                        <trigger_prototype>
+                            <expression>{Template Microsoft IIS Sites:iis.site.state[{#SITE_NAME}].nodata(16m)}=1</expression>
+                            <recovery_mode>0</recovery_mode>
+                            <recovery_expression/>
+                            <name>No state data on IIS Site {#SITE_NAME} for 16 minutes</name>
+                            <correlation_mode>0</correlation_mode>
+                            <correlation_tag/>
+                            <url/>
+                            <status>0</status>
+                            <priority>3</priority>
+                            <description/>
+                            <type>0</type>
+                            <manual_close>0</manual_close>
+                            <dependencies>
+                                <dependency>
+                                    <name>No pulse from IIS Site checker for 15 minutes</name>
+                                    <expression>{Template Microsoft IIS Sites:iis.site.pulse.nodata(15m)}=1</expression>
                                     <recovery_expression/>
                                 </dependency>
                             </dependencies>
@@ -930,6 +1002,22 @@
             <status>0</status>
             <priority>4</priority>
             <description/>
+            <type>0</type>
+            <manual_close>0</manual_close>
+            <dependencies/>
+            <tags/>
+        </trigger>
+        <trigger>
+            <expression>{Template Microsoft IIS Sites:iis.site.pulse.nodata(15m)}=1</expression>
+            <recovery_mode>0</recovery_mode>
+            <recovery_expression/>
+            <name>No pulse from IIS Site checker for 15 minutes</name>
+            <correlation_mode>0</correlation_mode>
+            <correlation_tag/>
+            <url/>
+            <status>0</status>
+            <priority>3</priority>
+            <description>The IIS host may be down or the IIS Checker service may be not running or the network may be not reachable.</description>
             <type>0</type>
             <manual_close>0</manual_close>
             <dependencies/>

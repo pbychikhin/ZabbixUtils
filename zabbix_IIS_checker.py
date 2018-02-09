@@ -180,7 +180,7 @@ class Sender(Utils):
                         if len(data) >= 4 and isinstance(data[3], io.BytesIO):
                             logging.debug("Got buffer: {}".format(data[3].getvalue().decode("ASCII", errors="ignore")))
                         zbx_packet.append(pyzabbix.ZabbixMetric(self.zbx_host, data[1], data[2]))  # data[1] is Zabbis key and data[2] is Zabbix value,
-                                                                                                   # data[0] is an IIS site name and data[3] is optional info (verbose Curl output)
+                                                                                                   # data[0] is data name (e.g. IIS site name) and data[3] is optional info (e.g. verbose Curl output)
                     sent = False
                     retry_counter = 0
                     for retry_timer in _RETRY_TIMERS:
@@ -647,6 +647,9 @@ class Checker(Utils):
         self._max_workers = max_workers
 
     def run(self):
+        ZBX_PULSE_DATA_NAME = "_iis_checker_pulse"
+        ZBX_PULSE_KEY_NAME = "iis.site.pulse"
+        ZBX_PULSE_DATA = 1
         self._sq.put_nowait(Message().send_register_client(threading.current_thread().name))
         while True:
             msg = self._q.get()
@@ -685,6 +688,9 @@ class Checker(Utils):
                             for probe_info in executor.map(self.get_site_probe, (site for site in self._IIS_sites.get() if site.get_name() in sites_started)):
                                 data_to_send.append(probe_info)
                         self._sq.put_nowait(Message().send_process_data(data_to_send))
+                time.sleep(5)  # give some time for dust to settle
+                logging.info("Sending a pulse")
+                self._sq.put_nowait(Message().send_process_data((ZBX_PULSE_DATA_NAME, ZBX_PULSE_KEY_NAME, ZBX_PULSE_DATA)))
             elif msg.stop_execution[0]:
                 self._sq.put_nowait(Message().send_deregister_client(threading.current_thread().name))
                 break
