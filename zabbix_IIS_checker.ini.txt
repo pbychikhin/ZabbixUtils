@@ -40,7 +40,7 @@ zbx_host=
 # Max number of workers in a pool. High values may cause check timeouts due to the cost of fork.
 #max_workers=10
 
-# Log file name. May be full path or just a file name in the application directory.
+# Log file name. May be full or relative to the app's directory.
 # By default, no file name set so log is performed to the stdout.
 #logfile=
 
@@ -72,7 +72,8 @@ zbx_host=
 #v4=no
 #v6=no
 
-# Full path to the CA bundle. This bundle can be downloaded from https://curl.haxx.se/ca/cacert.pem
+# Path to the CA bundle. May be full or relative to the app's directory.
+# This bundle can be downloaded from https://curl.haxx.se/ca/cacert.pem.
 # By default none is set and TLS (HTTPS) probe will fail.
 #ca=
 

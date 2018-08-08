@@ -1,5 +1,6 @@
 1.3
 - Added "Pulse" item to IIS checker: if Zabbix doesn't receive a pulse in time, it emits only one alert and suppresses alerts on every site.
+- Implemented processing of relative file names from config.
 
 1.2
 - Removed separate IIS checker scripts:

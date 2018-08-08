@@ -50,14 +50,12 @@ class Utils:
         """
         :param path: Relative to app's dir of full file path
         :param argv_0: Path to script. When a script is running as a service, sys.argv[0] doesn't point to it. So it needs to be specified explicitly
-        :return: Full file path
+        :return: Actual file path
         """
-        mydir = os.path.dirname(argv_0)
-        parts = os.path.split(path)
-        if len(parts[0]) == 0 and len(parts[1]) > 0:
-            return os.path.join(mydir, parts[1])
-        else:
+        if os.path.isabs(path):
             return path
+        else:
+            return os.path.normpath(os.path.join(os.path.dirname(argv_0), path))
 
     @property
     def _hostlist_separator(self):
@@ -366,7 +364,6 @@ class Discoverer(Utils):
 
 class Checker(Utils):
 
-
     class _Website:
 
         well_known_ports = cidict({"http": "80", "https": "443"})
@@ -401,12 +398,12 @@ class Checker(Utils):
         def get_curl_host(self):
             return self.curl_resolved_host
 
+    class _Config(Utils):
 
-    class _Config:
-
-        def __init__(self, iniobj, skipsections=set()):
+        def __init__(self, iniobj, circs, skipsections=set()):
             """
             :param iniobj: a parsed ini-file object
+            :param circs: a dict of "circumstances" - vars such as the app's file name (aka argv[0]) etc.
             :param skipsections: a set of section names that are irrelevant to the Checker and have to be skipped
             """
             self._defaults = types.SimpleNamespace()
@@ -420,7 +417,6 @@ class Checker(Utils):
             self._defaults.nameservers = None
             self._defaults.v4 = False
             self._defaults.v6 = False
-            # TODO: ca is the subject for processing with Utils.make_filename
             self._defaults.ca = None  # CA bundle (file name)
             self._defaults.verbose = False  # make Curl verbose and log its output
             self._sites = dict()
@@ -448,6 +444,8 @@ class Checker(Utils):
                         setattr(host, option, iniobj.getint(section, option))
                     elif option in {"v4", "v6", "verbose"}:
                         setattr(host, option, iniobj.getboolean(section, option))
+                    elif option == "ca":
+                        setattr(host, option, self.make_filename(iniobj.get(section, option), circs["argv_0"]))
                     else:
                         setattr(host, option, iniobj.get(section, option))
 
@@ -468,7 +466,6 @@ class Checker(Utils):
                 except (KeyError, AttributeError):
                     setattr(rv, var, getattr(self._defaults, var))
             return rv
-
 
     def get_site_state(self, name, method):
         """
@@ -625,7 +622,7 @@ class Checker(Utils):
 
     _allowed_methods = {"wmi", "ps"}
 
-    def __init__(self, q, sq, dq, evt_discovery_done, IIS_sites, iniobj, method="ps", max_workers=10):
+    def __init__(self, q, sq, dq, evt_discovery_done, IIS_sites, iniobj, circs, method="ps", max_workers=10):
         """
         :param q: command queue
         :param sq: Sender's command queue
@@ -633,6 +630,7 @@ class Checker(Utils):
         :param evt_discovery_done: the event being sent by Discoverer
         :param IIS_sites: a WrappedList's instance holding a list of IIS sites filled by Discoverer
         :param iniobj: a parsed ini-file object
+        :param circs: a dict of "circumstances" - vars such as the app's file name (aka argv[0]) etc.
         :param method: a method of fetching data about IIS, may be "wmi" or "ps"
         :param max_workers: max number of workers in a pool. High values may cause check timeouts due to the cost of fork
         """
@@ -642,7 +640,7 @@ class Checker(Utils):
         self._dq = dq
         self._evt_discovery_done = evt_discovery_done
         self._IIS_sites = IIS_sites
-        self._cfg = self._Config(iniobj, {"_appglobal"})
+        self._cfg = self._Config(iniobj, circs, {"_appglobal"})
         self._method = method
         self._max_workers = max_workers
 
@@ -845,6 +843,7 @@ class CheckerService(win32serviceutil.ServiceFramework, Utils):
                                                             evt_discovery_done=self.ediscovery,
                                                             IIS_sites=self.sites,
                                                             iniobj=self.cfg,
+                                                            circs={"argv_0":self.argv_0},
                                                             **self.checker_params).run, name="Checker")
             self.tchecker.start()
             self.expected_threadset = self.expected_threadset | {t.name for t in (self.tsender, self.tchecker)}
