@@ -746,7 +746,7 @@ class CheckerService(win32serviceutil.ServiceFramework, Utils):
         self.cfg = configparser.ConfigParser()
         try:  # find config file if possible. if not found, the defaults will be used
             if configfile is None:
-                configfile = ".".join([os.path.basename(self.argv_0).split(".")[0], "ini"])
+                configfile = ".".join([os.path.basename(self.argv_0).rsplit(".", 1)[0], "ini"])
             configfile = self.make_filename(configfile, self.argv_0)
             self.cfg.read_file(open(configfile))
         except FileNotFoundError:
