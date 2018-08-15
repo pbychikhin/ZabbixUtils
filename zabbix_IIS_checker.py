@@ -496,21 +496,24 @@ class Checker(Utils):
                 except Exception as exc:
                     retry_counter += 1
                     if retry_counter < len(_RETRY_TIMERS):
-                        logging.warning("Could not get site state due to {}. Re-trying in {:.2f} seconds".format(exc, retry_timer))
+                        logging.warning("Could not get {} site state due to {}. Re-trying in {:.2f} seconds".format(name, exc, retry_timer))
                         time.sleep(retry_timer)
                     else:
-                        logging.error("Could not get site state after {} tries. Giving up".format(max(0, retry_counter - 1)))
+                        logging.error("Could not get {} site state after {} tries. Giving up".format(name, max(0, retry_counter - 1)))
                         rt_exc = exc
                 else:
                     good = True
                     break
             if not good:
-                logging.error("Could not get site state due to errors. Return value has the exception object instead of site state")
+                logging.error("Could not get {} site state due to errors. Return value has the exception object instead of site state".format(name))
                 return name, zbx_key, rt_exc
             try:
                 return name, zbx_key, site_states[sites[0].GetState()[0]]
             except IndexError:
                 return name, zbx_key, notfound
+            except Exception as exc:
+                logging.error("Could not get {} site state due to errors. Return value has the exception object instead of site state".format(name))
+                return name, zbx_key, exc
         elif method == "ps":
             try:
                 ps_cmd[-1] = ps_cmd[-1].format(name)
@@ -519,11 +522,16 @@ class Checker(Utils):
                 else:
                     cp = types.SimpleNamespace()
                     cp.stdout = subprocess.check_output(ps_cmd, stderr=subprocess.DEVNULL)
-                return name, zbx_key, cidict(json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii"))["state"].lower()
+                site_state = cidict(json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii"))["state"]
+                if site_state is not None:
+                    return name, zbx_key, site_state.lower()
+                else:
+                    logging.error("Got null-value while getting {} site state. Web server might not be running".format(name))
+                    return name, zbx_key, RuntimeError("Got null-value from the PS cmdlet. Check if the Web server is running")
             except json.JSONDecodeError:
-                return name, zbx_key, notfound
+                return name, zbx_key, RuntimeError("Got corrupted JSON from the PS cmdlet")
         else:
-            return name, zbx_key, notfound
+            return name, zbx_key, RuntimeError("Unknown site state fetching method specified")
 
     def get_site_probe(self, siteobj):
         """
@@ -659,7 +667,6 @@ class Checker(Utils):
                     logging.info("Fetching sites states")
                     data_to_send = list()
                     sites_started = set()
-                    good = True
                     num_workers = min(self._max_workers, len(self._IIS_sites.get()))
                     logging.debug("Fetching sites states using no more than {} worker(s)".format(num_workers))
                     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -667,14 +674,11 @@ class Checker(Utils):
                                                        (site.get_name() for site in self._IIS_sites.get()),
                                                        itertools.repeat(self._method, len(self._IIS_sites.get()))):
                             if isinstance(state_info[2], Exception):
-                                logging.critical("Could not fetch the state of {} due to {}. Shutting down".format(state_info[0], state_info[2]))
-                                good = False
-                                break
+                                logging.error("Could not fetch the state of {} due to {}".format(state_info[0], state_info[2]))
+                                continue
                             data_to_send.append(state_info)
                             if state_info[2] == "started":
                                 sites_started.add(state_info[0])
-                    if not good:
-                        break
                     self._sq.put_nowait(Message().send_process_data(data_to_send))
                     if len(sites_started) > 0:
                         logging.info("Probing sites")
