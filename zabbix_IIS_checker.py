@@ -212,6 +212,7 @@ class IIS_site_info:
     site_startup_type = {True: "auto", False: "manual"}
 
     def __init__(self, site_instance, prefproto=_IIS_PREF_PROTO, prefhost=None):
+        self.orig_obj = site_instance
         self.name = site_instance.Name
         self.autostart = site_instance.ServerAutoStart
         self.bindings = []
@@ -241,6 +242,9 @@ class IIS_site_info:
             self.bindings.append(binding)
         if self.pref_binding is None:
             self.pref_binding = self.bindings[-1]
+
+    def get_orig_obj(self):
+        return self.orig_obj
 
     def get_name(self):
         return self.name
@@ -323,7 +327,7 @@ class Discoverer(Utils):
                             retry_counter = 0
                             for retry_timer in _RETRY_TIMERS:
                                 try:
-                                    for site in wmi.WMI(moniker=wmi_iis_moniker).query("SELECT * FROM Site"):
+                                    for site in wmi.WMI(moniker=wmi_iis_moniker).query("SELECT Name, Bindings, ServerAutoStart FROM Site"):
                                         self._IIS_sites.add(IIS_site_info(site, self._prefproto, self._prefhost))
                                 except Exception as exc:
                                     retry_counter += 1
@@ -467,12 +471,13 @@ class Checker(Utils):
                     setattr(rv, var, getattr(self._defaults, var))
             return rv
 
-    def get_site_state(self, name, method):
+    def get_site_state(self, site_info, method):
         """
-        :param name: IIS site name
+        :param site_info: a tuple of IIS site name and an object the IIS site info instance was created from
         :param method: a method of fetching data about IIS, may be "wmi" or "ps"
         :return: a tuple: (IIS site name, Zabbix key, IIS site state)
         """
+        name, orig_obj = site_info[:]
         ZBX_KEY_PREFIX = "iis.site.state"
         wmi_iis_moniker = _WMI_IIS_MONIKER
         notfound = "notfound"
@@ -492,7 +497,11 @@ class Checker(Utils):
             rt_exc = None
             for retry_timer in _RETRY_TIMERS:
                 try:
-                    sites = wmi.WMI(moniker=wmi_iis_moniker).query("SELECT * FROM Site WHERE Name = '{}'".format(name))
+                    if isinstance(orig_obj, wmi._Instance):
+                        logging.debug("Have WMI object. Will use it instead of making query for {}".format(name))
+                        site = (orig_obj,)
+                    else:
+                        site = wmi.WMI(moniker=wmi_iis_moniker).query("SELECT id FROM Site WHERE Name = '{}'".format(name))
                 except Exception as exc:
                     retry_counter += 1
                     if retry_counter < len(_RETRY_TIMERS):
@@ -508,7 +517,7 @@ class Checker(Utils):
                 logging.error("Could not get {} site state due to errors. Return value has the exception object instead of site state".format(name))
                 return name, zbx_key, rt_exc
             try:
-                return name, zbx_key, site_states[sites[0].GetState()[0]]
+                return name, zbx_key, site_states[site[0].GetState()[0]]
             except IndexError:
                 return name, zbx_key, notfound
             except Exception as exc:
@@ -671,7 +680,7 @@ class Checker(Utils):
                     logging.debug("Fetching sites states using no more than {} worker(s)".format(num_workers))
                     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
                         for state_info in executor.map(self.get_site_state,
-                                                       (site.get_name() for site in self._IIS_sites.get()),
+                                                       ((site.get_name(), site.get_orig_obj()) for site in self._IIS_sites.get()),
                                                        itertools.repeat(self._method, len(self._IIS_sites.get()))):
                             if isinstance(state_info[2], Exception):
                                 logging.error("Could not fetch the state of {} due to {}".format(state_info[0], state_info[2]))
