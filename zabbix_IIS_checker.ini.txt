@@ -25,6 +25,8 @@ zbx_host=
 #interval=300
 
 # IIS sites discovery method. May be "wmi" or "ps" (powershell).
+# If "check_method=wmi" (see below), it is also highly recommended to set "discovery_method=wmi" too.
+# Exceptions are likely otherwise.
 #discovery_method=ps
 
 # Preferred protocol for the Discoverer to return when multiple protocols configured for an IIS site.
