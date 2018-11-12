@@ -1,3 +1,6 @@
+1.5
+- Implemented Redis monitoring
+
 1.4
 - Optimized WMI method of fetching sites states in IIS checker. From now on, the WMI method can be used in production.
 

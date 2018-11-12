@@ -9,3 +9,6 @@ six
 pymi
 dnspython
 py-zabbix
+redis
+python-daemon
+pidfile

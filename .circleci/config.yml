@@ -15,6 +15,7 @@ jobs:
         zabbix_IIS_checker.ini.txt
         changelog.txt
         Zabbix_Templates.xml
+        zabbix_redis_stats_freebsdrc.sh
       GOPATH: "/GO"
       GOBIN: "/GO/bin"
     branches:
