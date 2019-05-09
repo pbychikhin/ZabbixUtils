@@ -1,0 +1,14 @@
+# Sample UserParameter settings for Zabbix items.
+# Please, adjust file paths in accordance to your setup.
+
+# FreeBSD ZFS volume.
+# Returns "OK" if everything fine.
+# Returns "PROBLEM: list of problem volumes" in case a volume failed.
+# Returns "FAIL: failure description" in case the script failed.
+UserParameter=volume.zfs.status, /usr/local/bin/python3 /usr/local/libexec/zabbix_item_freebsd_vol_status.py -type zfs
+
+# FreeBSD Gmirror volume.
+# Returns "OK" if everything fine.
+# Returns "PROBLEM: list of problem volumes" in case a volume failed.
+# Returns "FAIL: failure description" in case the script failed.
+UserParameter=volume.gmirror.status, /usr/local/bin/python3 /usr/local/libexec/zabbix_item_freebsd_vol_status.py -type gmirror

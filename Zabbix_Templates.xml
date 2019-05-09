@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>3.2</version>
-    <date>2018-11-12T15:18:52Z</date>
+    <date>2019-05-09T12:27:58Z</date>
     <groups>
         <group>
             <name>Templates</name>
@@ -1181,6 +1181,114 @@ If a pulse is not received during some period of time, that means a network issu
             <screens/>
         </template>
         <template>
+            <template>Template OS FreeBSD Volume Status</template>
+            <name>Template OS FreeBSD Volume Status</name>
+            <description/>
+            <groups>
+                <group>
+                    <name>Templates</name>
+                </group>
+            </groups>
+            <applications>
+                <application>
+                    <name>Volume Status</name>
+                </application>
+            </applications>
+            <items>
+                <item>
+                    <name>Gmirror Volume Status</name>
+                    <type>0</type>
+                    <snmp_community/>
+                    <multiplier>0</multiplier>
+                    <snmp_oid/>
+                    <key>volume.gmirror.status</key>
+                    <delay>900</delay>
+                    <history>45</history>
+                    <trends>0</trends>
+                    <status>0</status>
+                    <value_type>1</value_type>
+                    <allowed_hosts/>
+                    <units/>
+                    <delta>0</delta>
+                    <snmpv3_contextname/>
+                    <snmpv3_securityname/>
+                    <snmpv3_securitylevel>0</snmpv3_securitylevel>
+                    <snmpv3_authprotocol>0</snmpv3_authprotocol>
+                    <snmpv3_authpassphrase/>
+                    <snmpv3_privprotocol>0</snmpv3_privprotocol>
+                    <snmpv3_privpassphrase/>
+                    <formula>1</formula>
+                    <delay_flex/>
+                    <params/>
+                    <ipmi_sensor/>
+                    <data_type>0</data_type>
+                    <authtype>0</authtype>
+                    <username/>
+                    <password/>
+                    <publickey/>
+                    <privatekey/>
+                    <port/>
+                    <description/>
+                    <inventory_link>0</inventory_link>
+                    <applications>
+                        <application>
+                            <name>Volume Status</name>
+                        </application>
+                    </applications>
+                    <valuemap/>
+                    <logtimefmt/>
+                </item>
+                <item>
+                    <name>ZFS Volume Status</name>
+                    <type>0</type>
+                    <snmp_community/>
+                    <multiplier>0</multiplier>
+                    <snmp_oid/>
+                    <key>volume.zfs.status</key>
+                    <delay>900</delay>
+                    <history>45</history>
+                    <trends>0</trends>
+                    <status>0</status>
+                    <value_type>1</value_type>
+                    <allowed_hosts/>
+                    <units/>
+                    <delta>0</delta>
+                    <snmpv3_contextname/>
+                    <snmpv3_securityname/>
+                    <snmpv3_securitylevel>0</snmpv3_securitylevel>
+                    <snmpv3_authprotocol>0</snmpv3_authprotocol>
+                    <snmpv3_authpassphrase/>
+                    <snmpv3_privprotocol>0</snmpv3_privprotocol>
+                    <snmpv3_privpassphrase/>
+                    <formula>1</formula>
+                    <delay_flex/>
+                    <params/>
+                    <ipmi_sensor/>
+                    <data_type>0</data_type>
+                    <authtype>0</authtype>
+                    <username/>
+                    <password/>
+                    <publickey/>
+                    <privatekey/>
+                    <port/>
+                    <description/>
+                    <inventory_link>0</inventory_link>
+                    <applications>
+                        <application>
+                            <name>Volume Status</name>
+                        </application>
+                    </applications>
+                    <valuemap/>
+                    <logtimefmt/>
+                </item>
+            </items>
+            <discovery_rules/>
+            <httptests/>
+            <macros/>
+            <templates/>
+            <screens/>
+        </template>
+        <template>
             <template>Template Windows 2008 R2 DNS Server - Custom Items</template>
             <name>Template Windows 2008 R2 DNS Server - Custom Items</name>
             <description/>
@@ -1899,6 +2007,22 @@ If a pulse is not received during some period of time, that means a network issu
             <tags/>
         </trigger>
         <trigger>
+            <expression>{Template OS FreeBSD Volume Status:volume.gmirror.status.regexp(^OK)}=0</expression>
+            <recovery_mode>0</recovery_mode>
+            <recovery_expression/>
+            <name>Gmirror volume</name>
+            <correlation_mode>0</correlation_mode>
+            <correlation_tag/>
+            <url/>
+            <status>0</status>
+            <priority>4</priority>
+            <description/>
+            <type>0</type>
+            <manual_close>0</manual_close>
+            <dependencies/>
+            <tags/>
+        </trigger>
+        <trigger>
             <expression>{Template App Redis:redis.info.redis_version.nodata(5m)}=1</expression>
             <recovery_mode>0</recovery_mode>
             <recovery_expression/>
@@ -2047,6 +2171,22 @@ If a pulse is not received during some period of time, that means a network issu
             <recovery_mode>1</recovery_mode>
             <recovery_expression>{Template App Redis:redis.info._mem_fragmentation_ratio_dev.last()}&lt;0.3</recovery_expression>
             <name>Redis memory is highly fragmented</name>
+            <correlation_mode>0</correlation_mode>
+            <correlation_tag/>
+            <url/>
+            <status>0</status>
+            <priority>4</priority>
+            <description/>
+            <type>0</type>
+            <manual_close>0</manual_close>
+            <dependencies/>
+            <tags/>
+        </trigger>
+        <trigger>
+            <expression>{Template OS FreeBSD Volume Status:volume.zfs.status.regexp(^OK)}=0</expression>
+            <recovery_mode>0</recovery_mode>
+            <recovery_expression/>
+            <name>ZFS volume</name>
             <correlation_mode>0</correlation_mode>
             <correlation_tag/>
             <url/>
