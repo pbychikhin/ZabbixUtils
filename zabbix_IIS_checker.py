@@ -7,6 +7,7 @@ import re
 import time
 import random
 import wmi
+import pythoncom
 import sys
 import os.path
 import subprocess
@@ -318,6 +319,11 @@ class Discoverer(Utils):
             "-ExecutionPolicy", "Bypass",
             "-Command", "Get-Website|Select Name,Bindings,ServerAutoStart|ConvertTo-Json -depth 3 -compress"]
         last_discovery_time = 0
+        COM_initialized = False
+        if self._method == "wmi":
+            pythoncom.CoInitializeEx(pythoncom.COINIT_MULTITHREADED)
+            COM_initialized = True
+            logging.debug("COM initialized")
         try:
             while True:
                 msg = self._q.get()
@@ -370,6 +376,10 @@ class Discoverer(Utils):
                     break
         except:
             logging.exception("Unexpected exception in the run loop")
+        finally:
+            if COM_initialized:
+                pythoncom.CoUninitialize()
+                logging.debug("COM uninitialized")
 
 
 class Checker(Utils):
@@ -501,34 +511,43 @@ class Checker(Utils):
             good = False
             retry_counter = 0
             rt_exc = None
-            for retry_timer in _RETRY_TIMERS:
-                try:
-                    if isinstance(orig_obj, wmi._Instance):
-                        logging.debug("Have WMI object. Will use it instead of making query for {}".format(name))
-                        site = (orig_obj,)
-                    else:
-                        site = wmi.WMI(moniker=wmi_iis_moniker).query("SELECT id FROM Site WHERE Name = '{}'".format(name))
-                except Exception as exc:
-                    retry_counter += 1
-                    if retry_counter < len(_RETRY_TIMERS):
-                        logging.warning("Could not get {} site state due to {}. Re-trying in {:.2f} seconds".format(name, exc, retry_timer))
-                        time.sleep(retry_timer)
-                    else:
-                        logging.error("Could not get {} site state after {} tries. Giving up".format(name, max(0, retry_counter - 1)))
-                        rt_exc = exc
-                else:
-                    good = True
-                    break
-            if not good:
-                logging.error("Could not get {} site state due to errors. Return value has the exception object instead of site state".format(name))
-                return name, zbx_key, rt_exc
+            COM_initialized = False
             try:
-                return name, zbx_key, site_states[site[0].GetState()[0]]
-            except IndexError:
-                return name, zbx_key, notfound
-            except Exception as exc:
-                logging.error("Could not get {} site state due to errors. Return value has the exception object instead of site state".format(name))
-                return name, zbx_key, exc
+                for retry_timer in _RETRY_TIMERS:
+                    try:
+                        if isinstance(orig_obj, wmi._wmi_object):
+                            logging.debug("Have WMI object. Will use it instead of making query for {}".format(name))
+                            site = (orig_obj,)
+                        else:
+                            pythoncom.CoInitialize()
+                            COM_initialized = True
+                            logging.debug("COM initialized")
+                            site = wmi.WMI(moniker=wmi_iis_moniker).query("SELECT id FROM Site WHERE Name = '{}'".format(name))
+                    except Exception as exc:
+                        retry_counter += 1
+                        if retry_counter < len(_RETRY_TIMERS):
+                            logging.warning("Could not get {} site state due to {}. Re-trying in {:.2f} seconds".format(name, exc, retry_timer))
+                            time.sleep(retry_timer)
+                        else:
+                            logging.error("Could not get {} site state after {} tries. Giving up".format(name, max(0, retry_counter - 1)))
+                            rt_exc = exc
+                    else:
+                        good = True
+                        break
+                if not good:
+                    logging.error("Could not get {} site state due to errors. Return value has the exception object instead of site state".format(name))
+                    return name, zbx_key, rt_exc
+                try:
+                    return name, zbx_key, site_states[site[0].GetState()[0]]
+                except IndexError:
+                    return name, zbx_key, notfound
+                except Exception as exc:
+                    logging.error("Could not get {} site state due to errors. Return value has the exception object instead of site state".format(name))
+                    return name, zbx_key, exc
+            finally:
+                if COM_initialized:
+                    pythoncom.CoUninitialize()
+                    logging.debug("COM uninitialized")
         elif method == "ps":
             try:
                 ps_cmd[-1] = ps_cmd[-1].format(name)

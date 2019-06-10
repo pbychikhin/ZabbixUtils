@@ -1,3 +1,7 @@
+1.7
+- Re-implemented zabbix_IIS_checker.py to use WMI - not PyMI which causes memory leaks
+- Main threads log unhandled exception which caused their death
+
 1.6
 - Implemented FreeBSD volumes monitoring
 - Added EPEL repo installation commands to the CI setup - some apps are now installed from EPEL
