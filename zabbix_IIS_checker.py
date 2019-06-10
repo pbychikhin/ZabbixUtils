@@ -153,58 +153,61 @@ class Sender(Utils):
     def run(self):
         clients = set()
         stop = False
-        while True:
-            if not stop or clients:
-                msg = self.q.get()
-            else:
-                try:
-                    msg = self.q.get_nowait()
-                except queue.Empty:
+        try:
+            while True:
+                if not stop or clients:
+                    msg = self.q.get()
+                else:
+                    try:
+                        msg = self.q.get_nowait()
+                    except queue.Empty:
+                        break
+                if msg.process_data[0]:
+                    if self.sender_type == "print":
+                        for data in msg.process_data[1]:
+                            logging.debug("Got message: {}".format(data))
+                            if len(data) >= 4 and isinstance(data[3], io.BytesIO):
+                                logging.debug("Got buffer: {}".format(data[3].getvalue().decode("ASCII", errors="ignore")))
+                                print(data[0:3])
+                                print(data[3].getvalue().decode("ASCII", errors="ignore"))  # "ignore" might not be the best handler
+                            else:
+                                print(data)
+                    elif self.sender_type == "send":
+                        zbx_packet = list()
+                        for data in msg.process_data[1]:
+                            logging.debug("Got message: {}".format(data))
+                            if len(data) >= 4 and isinstance(data[3], io.BytesIO):
+                                logging.debug("Got buffer: {}".format(data[3].getvalue().decode("ASCII", errors="ignore")))
+                            zbx_packet.append(pyzabbix.ZabbixMetric(self.zbx_host, data[1], data[2]))  # data[1] is Zabbis key and data[2] is Zabbix value,
+                                                                                                       # data[0] is data name (e.g. IIS site name) and data[3] is optional info (e.g. verbose Curl output)
+                        sent = False
+                        retry_counter = 0
+                        for retry_timer in _RETRY_TIMERS:
+                            try:
+                                retry_counter += 1
+                                pyzabbix.ZabbixSender(self.zbx_srv, self.zbx_port).send(zbx_packet)
+                            except Exception:
+                                logging.exception("Couldn't send data")
+                                logging.info("Re-trying in {} secs".format(retry_timer))
+                                time.sleep(retry_timer)
+                            else:
+                                sent = True
+                                break
+                        if not sent:
+                            logging.warning("The data was not sent after {} tries".format(retry_counter))
+                elif msg.register_client[0]:
+                    clients.add(msg.register_client[1])
+                elif msg.deregister_client[0]:
+                    try:
+                        clients.remove(msg.deregister_client[1])
+                    except KeyError:
+                        pass
+                elif msg.stop_execution[0]:
+                    stop = True
+                elif msg.force_stop_execution[0]:
                     break
-            if msg.process_data[0]:
-                if self.sender_type == "print":
-                    for data in msg.process_data[1]:
-                        logging.debug("Got message: {}".format(data))
-                        if len(data) >= 4 and isinstance(data[3], io.BytesIO):
-                            logging.debug("Got buffer: {}".format(data[3].getvalue().decode("ASCII", errors="ignore")))
-                            print(data[0:3])
-                            print(data[3].getvalue().decode("ASCII", errors="ignore"))  # "ignore" might not be the best handler
-                        else:
-                            print(data)
-                elif self.sender_type == "send":
-                    zbx_packet = list()
-                    for data in msg.process_data[1]:
-                        logging.debug("Got message: {}".format(data))
-                        if len(data) >= 4 and isinstance(data[3], io.BytesIO):
-                            logging.debug("Got buffer: {}".format(data[3].getvalue().decode("ASCII", errors="ignore")))
-                        zbx_packet.append(pyzabbix.ZabbixMetric(self.zbx_host, data[1], data[2]))  # data[1] is Zabbis key and data[2] is Zabbix value,
-                                                                                                   # data[0] is data name (e.g. IIS site name) and data[3] is optional info (e.g. verbose Curl output)
-                    sent = False
-                    retry_counter = 0
-                    for retry_timer in _RETRY_TIMERS:
-                        try:
-                            retry_counter += 1
-                            pyzabbix.ZabbixSender(self.zbx_srv, self.zbx_port).send(zbx_packet)
-                        except Exception:
-                            logging.exception("Couldn't send data")
-                            logging.info("Re-trying in {} secs".format(retry_timer))
-                            time.sleep(retry_timer)
-                        else:
-                            sent = True
-                            break
-                    if not sent:
-                        logging.warning("The data was not sent after {} tries".format(retry_counter))
-            elif msg.register_client[0]:
-                clients.add(msg.register_client[1])
-            elif msg.deregister_client[0]:
-                try:
-                    clients.remove(msg.deregister_client[1])
-                except KeyError:
-                    pass
-            elif msg.stop_execution[0]:
-                stop = True
-            elif msg.force_stop_execution[0]:
-                break
+        except:
+            logging.exception("Unexpected exception in the run loop")
 
 
 class IIS_site_info:
@@ -315,55 +318,58 @@ class Discoverer(Utils):
             "-ExecutionPolicy", "Bypass",
             "-Command", "Get-Website|Select Name,Bindings,ServerAutoStart|ConvertTo-Json -depth 3 -compress"]
         last_discovery_time = 0
-        while True:
-            msg = self._q.get()
-            if msg.process_data[0]:
-                try:
-                    if time.time() - last_discovery_time > self._cache_time:
-                        self._IIS_sites.reset()
-                        logging.info("Performing discovery using {} method".format(self._method))
-                        if self._method == "wmi":
-                            good = False
-                            retry_counter = 0
-                            for retry_timer in _RETRY_TIMERS:
-                                try:
-                                    for site in wmi.WMI(moniker=wmi_iis_moniker).query("SELECT Name, Bindings, ServerAutoStart FROM Site"):
-                                        self._IIS_sites.add(IIS_site_info(site, self._prefproto, self._prefhost))
-                                except Exception as exc:
-                                    retry_counter += 1
-                                    if retry_counter <= len(_RETRY_TIMERS):
-                                        logging.warning("Could not perform discovery due to {}. Re-trying in {:.2f} seconds".format(exc, retry_timer))
-                                        time.sleep(retry_timer)
+        try:
+            while True:
+                msg = self._q.get()
+                if msg.process_data[0]:
+                    try:
+                        if time.time() - last_discovery_time > self._cache_time:
+                            self._IIS_sites.reset()
+                            logging.info("Performing discovery using {} method".format(self._method))
+                            if self._method == "wmi":
+                                good = False
+                                retry_counter = 0
+                                for retry_timer in _RETRY_TIMERS:
+                                    try:
+                                        for site in wmi.WMI(moniker=wmi_iis_moniker).query("SELECT Name, Bindings, ServerAutoStart FROM Site"):
+                                            self._IIS_sites.add(IIS_site_info(site, self._prefproto, self._prefhost))
+                                    except Exception as exc:
+                                        retry_counter += 1
+                                        if retry_counter <= len(_RETRY_TIMERS):
+                                            logging.warning("Could not perform discovery due to {}. Re-trying in {:.2f} seconds".format(exc, retry_timer))
+                                            time.sleep(retry_timer)
+                                        else:
+                                            logging.error("Could not perform discovery after {} tries. Giving up".format(max(0, retry_counter - 1)))
                                     else:
-                                        logging.error("Could not perform discovery after {} tries. Giving up".format(max(0, retry_counter - 1)))
-                                else:
-                                    good = True
+                                        good = True
+                                        break
+                                if not good:
+                                    logging.critical("Could not perform discovery due to errors. Shutting down")
                                     break
-                            if not good:
-                                logging.critical("Could not perform discovery due to errors. Shutting down")
-                                break
-                        elif self._method == "ps":
-                            if sys.version_info.major > 2 and sys.version_info.minor > 4:
-                                cp = subprocess.run(ps_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                            else:
-                                cp = types.SimpleNamespace()
-                                cp.stdout = subprocess.check_output(ps_cmd, stderr=subprocess.DEVNULL)
-                            try:
-                                for site in json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii"):
-                                    self._IIS_sites.add(IIS_site_info_json(cidict(site), self._prefproto, self._prefhost))
-                            except json.JSONDecodeError:
-                                pass
-                                # TODO: We consider json errors as transient,
-                                # TODO: but it would be great to add some logging here
-                        last_discovery_time = time.time()
-                    else:
-                        logging.info("Using cached data")
-                finally:
-                    self._evt_discovery_done.set()  # We must set event in any case. Infinite waiting will occur otherwise
-            elif msg.stop_execution[0]:
-                break
-            elif msg.force_stop_execution[0]:
-                break
+                            elif self._method == "ps":
+                                if sys.version_info.major > 2 and sys.version_info.minor > 4:
+                                    cp = subprocess.run(ps_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                                else:
+                                    cp = types.SimpleNamespace()
+                                    cp.stdout = subprocess.check_output(ps_cmd, stderr=subprocess.DEVNULL)
+                                try:
+                                    for site in json.loads(cp.stdout.decode(encoding="ascii"), encoding="ascii"):
+                                        self._IIS_sites.add(IIS_site_info_json(cidict(site), self._prefproto, self._prefhost))
+                                except json.JSONDecodeError:
+                                    pass
+                                    # TODO: We consider json errors as transient,
+                                    # TODO: but it would be great to add some logging here
+                            last_discovery_time = time.time()
+                        else:
+                            logging.info("Using cached data")
+                    finally:
+                        self._evt_discovery_done.set()  # We must set event in any case. Infinite waiting will occur otherwise
+                elif msg.stop_execution[0]:
+                    break
+                elif msg.force_stop_execution[0]:
+                    break
+        except:
+            logging.exception("Unexpected exception in the run loop")
 
 
 class Checker(Utils):
@@ -665,48 +671,51 @@ class Checker(Utils):
         ZBX_PULSE_DATA_NAME = "_iis_checker_pulse"
         ZBX_PULSE_KEY_NAME = "iis.site.pulse"
         ZBX_PULSE_DATA = 1
-        self._sq.put_nowait(Message().send_register_client(threading.current_thread().name))
-        while True:
-            msg = self._q.get()
-            if msg.process_data[0]:
-                self._evt_discovery_done.clear()
-                self._dq.put_nowait(Message().send_process_data(None))
-                self._evt_discovery_done.wait()
-                if len(self._IIS_sites.get()) > 0:
-                    logging.info("Fetching sites states")
-                    data_to_send = list()
-                    sites_started = set()
-                    num_workers = min(self._max_workers, len(self._IIS_sites.get()))
-                    logging.debug("Fetching sites states using no more than {} worker(s)".format(num_workers))
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-                        for state_info in executor.map(self.get_site_state,
-                                                       ((site.get_name(), site.get_orig_obj()) for site in self._IIS_sites.get()),
-                                                       itertools.repeat(self._method, len(self._IIS_sites.get()))):
-                            if isinstance(state_info[2], Exception):
-                                logging.error("Could not fetch the state of {} due to {}".format(state_info[0], state_info[2]))
-                                continue
-                            data_to_send.append(state_info)
-                            if state_info[2] == "started":
-                                sites_started.add(state_info[0])
-                    self._sq.put_nowait(Message().send_process_data(data_to_send))
-                    if len(sites_started) > 0:
-                        logging.info("Probing sites")
-                        time.sleep(5)  # give some time for dust to settle
+        try:
+            self._sq.put_nowait(Message().send_register_client(threading.current_thread().name))
+            while True:
+                msg = self._q.get()
+                if msg.process_data[0]:
+                    self._evt_discovery_done.clear()
+                    self._dq.put_nowait(Message().send_process_data(None))
+                    self._evt_discovery_done.wait()
+                    if len(self._IIS_sites.get()) > 0:
+                        logging.info("Fetching sites states")
                         data_to_send = list()
-                        num_workers = min(self._max_workers, len(sites_started))
-                        logging.debug("Probing sites using no more than {} worker(s)".format(num_workers))
+                        sites_started = set()
+                        num_workers = min(self._max_workers, len(self._IIS_sites.get()))
+                        logging.debug("Fetching sites states using no more than {} worker(s)".format(num_workers))
                         with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-                            for probe_info in executor.map(self.get_site_probe, (site for site in self._IIS_sites.get() if site.get_name() in sites_started)):
-                                data_to_send.append(probe_info)
+                            for state_info in executor.map(self.get_site_state,
+                                                           ((site.get_name(), site.get_orig_obj()) for site in self._IIS_sites.get()),
+                                                           itertools.repeat(self._method, len(self._IIS_sites.get()))):
+                                if isinstance(state_info[2], Exception):
+                                    logging.error("Could not fetch the state of {} due to {}".format(state_info[0], state_info[2]))
+                                    continue
+                                data_to_send.append(state_info)
+                                if state_info[2] == "started":
+                                    sites_started.add(state_info[0])
                         self._sq.put_nowait(Message().send_process_data(data_to_send))
-                time.sleep(5)  # give some time for dust to settle
-                logging.info("Sending a pulse")
-                self._sq.put_nowait(Message().send_process_data((ZBX_PULSE_DATA_NAME, ZBX_PULSE_KEY_NAME, ZBX_PULSE_DATA)))
-            elif msg.stop_execution[0]:
-                self._sq.put_nowait(Message().send_deregister_client(threading.current_thread().name))
-                break
-            elif msg.force_stop_execution[0]:
-                break
+                        if len(sites_started) > 0:
+                            logging.info("Probing sites")
+                            time.sleep(5)  # give some time for dust to settle
+                            data_to_send = list()
+                            num_workers = min(self._max_workers, len(sites_started))
+                            logging.debug("Probing sites using no more than {} worker(s)".format(num_workers))
+                            with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+                                for probe_info in executor.map(self.get_site_probe, (site for site in self._IIS_sites.get() if site.get_name() in sites_started)):
+                                    data_to_send.append(probe_info)
+                            self._sq.put_nowait(Message().send_process_data(data_to_send))
+                    time.sleep(5)  # give some time for dust to settle
+                    logging.info("Sending a pulse")
+                    self._sq.put_nowait(Message().send_process_data((ZBX_PULSE_DATA_NAME, ZBX_PULSE_KEY_NAME, ZBX_PULSE_DATA)))
+                elif msg.stop_execution[0]:
+                    self._sq.put_nowait(Message().send_deregister_client(threading.current_thread().name))
+                    break
+                elif msg.force_stop_execution[0]:
+                    break
+        except:
+            logging.exception("Unexpected exception in the run loop")
 
 
 class CheckerService(win32serviceutil.ServiceFramework, Utils):
