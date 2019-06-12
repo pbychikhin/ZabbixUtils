@@ -6,7 +6,7 @@
 pycurl
 ldap3
 six
-pymi
+wmi
 dnspython
 py-zabbix
 redis
