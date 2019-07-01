@@ -580,6 +580,7 @@ class Checker(Utils):
         WEBSITE_FAILED_MESSAGE = "STATUS_ERR_WEBAPP_PROBLEM"
         HTML_DEFAULT_CHARSET = "UTF-8"
         HTML_FALLBACK_CHARSET = "ISO-8859-1"
+        HTML_HEADER_CHARSET = "ISO-8859-1"
         sitebindings = self._hostlist_separator.join(siteobj.get_normalised_hostnames())
         if self._hostlist_separator in sitebindings:
             zbx_key_pattern = "{}[{},{},{},{},\"{}\"]"
@@ -629,7 +630,15 @@ class Checker(Utils):
             for url in w.get_url():
                 logging.debug("Probing URL {}".format(url["path"]))
                 buffer = io.BytesIO()
+                headers = {}
+
+                def curl_headerfunction(line, h=headers):
+                    line = line.decode(HTML_HEADER_CHARSET).strip()
+                    if line.startswith("HTTP"):
+                        h["_STATUS_REASON_PHRASE"] = line.split(maxsplit=2)[-1]
+
                 c.setopt(pycurl.WRITEDATA, buffer)
+                c.setopt(pycurl.HEADERFUNCTION, curl_headerfunction)
                 c.setopt(pycurl.URL, url["path"])
                 try:
                     c.perform()
@@ -646,18 +655,22 @@ class Checker(Utils):
                 if response_info["code"] == 401:
                     return siteobj.get_name(), zbx_key, WEBSITE_AUTH_REQUIRED_MESSAGE, curl_debug_buf
                 if response_info["code"] >= 400:
-                    return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
+                    if "_STATUS_REASON_PHRASE" in headers and len(headers["_STATUS_REASON_PHRASE"]) > 0:
+                        msg = "{}: {}".format(WEBSITE_FAILED_MESSAGE, headers["_STATUS_REASON_PHRASE"])
+                    else:
+                        msg = WEBSITE_FAILED_MESSAGE
+                    return siteobj.get_name(), zbx_key, msg, curl_debug_buf
                 try:
                     body = buffer.getvalue().decode(response_info["charset"])
                 except UnicodeDecodeError:
                     try:
                         body = buffer.getvalue().decode(HTML_FALLBACK_CHARSET)
                     except ValueError:
-                        return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
+                        return siteobj.get_name(), zbx_key, "{}: could not decode response body".format(WEBSITE_FAILED_MESSAGE), curl_debug_buf
                 if url["body"] and not re.search(url["body"], body, re.I):
-                    return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
+                    return siteobj.get_name(), zbx_key, "{}: response body doesn't contain text {}".format(WEBSITE_FAILED_MESSAGE, url["body"]), curl_debug_buf
                 elif url["nobody"] and re.search(url["nobody"], body, re.I):
-                    return siteobj.get_name(), zbx_key, WEBSITE_FAILED_MESSAGE, curl_debug_buf
+                    return siteobj.get_name(), zbx_key, "{}: response body contains text {}".format(WEBSITE_FAILED_MESSAGE, url["nobody"]), curl_debug_buf
         finally:
             c.close()
         return siteobj.get_name(), zbx_key, OK_MESSAGE, curl_debug_buf
