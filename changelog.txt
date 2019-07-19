@@ -1,3 +1,8 @@
+1.8
+- Implemented ESXi storage status monitoring with vSphere Web Services API: zabbix_item_esxi_storage_status.py
+- Implemented arbitrary volume status monitoring using CLI: zabbix_item_cli_vol_status.py
+  The script is extendable. Currently it is possible to monitor LSI arrays with storcli utility
+
 1.7
 - Re-implemented zabbix_IIS_checker.py to use WMI - not PyMI which causes memory leaks
 - Main threads log unhandled exception which caused their death
