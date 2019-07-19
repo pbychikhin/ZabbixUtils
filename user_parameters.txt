@@ -20,8 +20,8 @@ UserParameter=volume.gmirror.status, /usr/local/bin/python3 /usr/local/libexec/z
 # Returns "FAIL: failure description" in case the script failed.
 UserParameter=esxi.storage.status[*], python3 /opt/zabbix_utils/zabbix_item_esxi_storage_status.py -host $1 -userpass $1.txt
 
-# VMware ESXi LSI volume.
+# LSI volume (CLI).
 # Returns "OK" if everything fine.
 # Returns "PROBLEM: list of problem volumes" in case a volume failed.
 # Returns "FAIL: failure description" in case the script failed.
-UserParameter=volume.lsi.status[*], python3 /opt/zabbix_utils/zabbix_item_vmware_vol_status.py -type lsi -clipath /opt/MegaRAID/VmwareKL-$1
+UserParameter=volume.lsi.status[*], python3 /opt/zabbix_utils/zabbix_item_cli_vol_status.py -type lsi -clipath /opt/MegaRAID/VmwareKL-$1

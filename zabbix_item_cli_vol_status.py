@@ -189,7 +189,7 @@ if __name__ == "__main__":
             "lsi": LSIVolStatus
         }
     }
-    cmd = argparse.ArgumentParser(description="Volume status getter")
+    cmd = argparse.ArgumentParser(description="Volume status getter (CLI)")
     cmd.add_argument("-version", action="version", version=_FILE_VER)
     cmd.add_argument("-type", help="Volume type ({})".format(", ".join(sorted(defaults["getters"].keys()))),
                      metavar="name", choices=defaults["getters"].keys(), required=True)
