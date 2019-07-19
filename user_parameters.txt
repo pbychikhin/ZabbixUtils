@@ -12,3 +12,10 @@ UserParameter=volume.zfs.status, /usr/local/bin/python3 /usr/local/libexec/zabbi
 # Returns "PROBLEM: list of problem volumes" in case a volume failed.
 # Returns "FAIL: failure description" in case the script failed.
 UserParameter=volume.gmirror.status, /usr/local/bin/python3 /usr/local/libexec/zabbix_item_freebsd_vol_status.py -type gmirror
+
+# VMware ESXi storage.
+# Uses vSphere Web Services API. Appropriate provider's VIBs must be installed on the ESXi host for storage status to be monitored.
+# Returns "OK" if everything fine.
+# Returns "PROBLEM: list of problem items" in case an item failed.
+# Returns "FAIL: failure description" in case the script failed.
+UserParameter=esxi.storage.status[*], python3 /opt/zabbix_utils/zabbix_item_esxi_storage_status.py -host $1 -userpass $1.txt

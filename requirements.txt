@@ -12,3 +12,4 @@ py-zabbix
 redis
 python-daemon
 pidfile
+pyvmomi
