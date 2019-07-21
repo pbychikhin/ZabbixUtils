@@ -31,7 +31,7 @@ class ConnInfo:
         self.verifycert = verifycert
 
 
-class VolStatus:
+class StorageStatus:
     """
     Base class
     """
@@ -84,13 +84,13 @@ class VolStatus:
             return "{}: {}".format(s[0], s[1])
 
 
-class ESXiVolStatus(VolStatus):
+class ESXiStorageStatus(StorageStatus):
     """
     ESXi class
     """
 
     def __init__(self, host, user, password, port=443, verifycert=False):
-        VolStatus.__init__(self, conninfo=ConnInfo(host, user, password, port, verifycert))
+        StorageStatus.__init__(self, conninfo=ConnInfo(host, user, password, port, verifycert))
 
     def connect(self, conninfo):
         if conninfo.verifycert:
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     for line in open(make_filename(cmdargs.userpass), newline="\n"):
         lines.append(line.strip())
     cmdargs.user, cmdargs.password = lines[0:2]
-    print(ESXiVolStatus(
+    print(ESXiStorageStatus(
         cmdargs.host,
         cmdargs.user,
         cmdargs.password,

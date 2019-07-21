@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>3.2</version>
-    <date>2019-07-19T12:56:00Z</date>
+    <date>2019-07-21T19:18:35Z</date>
     <groups>
         <group>
             <name>Templates</name>
@@ -2118,6 +2118,22 @@ If a pulse is not received during some period of time, that means a network issu
             <url/>
             <status>0</status>
             <priority>4</priority>
+            <description/>
+            <type>0</type>
+            <manual_close>0</manual_close>
+            <dependencies/>
+            <tags/>
+        </trigger>
+        <trigger>
+            <expression>{Template VMware ESXi Storage Status:esxi.storage.status[{$ESXI_NAME}].nodata(1h)}=1</expression>
+            <recovery_mode>0</recovery_mode>
+            <recovery_expression/>
+            <name>No data on ESXi storage for 1 hour</name>
+            <correlation_mode>0</correlation_mode>
+            <correlation_tag/>
+            <url/>
+            <status>0</status>
+            <priority>3</priority>
             <description/>
             <type>0</type>
             <manual_close>0</manual_close>
