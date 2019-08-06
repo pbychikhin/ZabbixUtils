@@ -40,9 +40,11 @@ class StorageStatus:
         self.conninfo = conninfo
         self.connected = False
         self.service_instance = None
-        self.sGreen = "Green"   # vSphere "Green"
+        self.sGreen = "Green"    # vSphere "Green"
+        self.sYellow = "Yellow"  # vSphere "Yellow"
         self.status = {
-            "devs_problem": [],
+            "devs_problem_red": [],
+            "devs_problem_yellow": [],
             "success": False,
             "error": "Status hasn't been fetched yet"
         }
@@ -66,8 +68,10 @@ class StorageStatus:
 
     def get_status(self):
         if self.status["success"]:
-            if len(self.status["devs_problem"]):
-                return "PROBLEM", ", ".join(self.status["devs_problem"])
+            if len(self.status["devs_problem_red"]):
+                return "PROBLEM", ", ".join(self.status["devs_problem_red"] + self.status["devs_problem_yellow"])
+            elif len(self.status["devs_problem_yellow"]):
+                return "WARNING", ", ".join(self.status["devs_problem_yellow"])
             else:
                 return "OK",
         else:
@@ -115,8 +119,15 @@ class ESXiStorageStatus(StorageStatus):
             for item in view.view:
                 item.configManager.serviceSystem.RefreshServices()
                 for info in item.runtime.healthSystemRuntime.hardwareStatusInfo.storageStatusInfo:
-                    if info.status.key != self.sGreen or info.status.label != self.sGreen:
-                        self.status["devs_problem"].append(info.name)
+                    # We use status.label below because it is a property of the ancestor: Description.
+                    # There is also status.key that seems the same. But we don't use it because this is a property of
+                    # ElementDescription which inherits Description.
+                    if info.status.label == self.sYellow:
+                        self.status["devs_problem_yellow"].append(info.name)
+                    elif info.status.label != self.sGreen:
+                        # We are not sure so far if there are any other statuses but Green and Yellow.
+                        # So we treat anything else Red.
+                        self.status["devs_problem_red"].append(info.name)
         except Exception as e:
             self.status["error"] = "Could not fetch volume status: {}".format(str(e))
         else:
