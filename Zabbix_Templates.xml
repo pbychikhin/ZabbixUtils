@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>3.2</version>
-    <date>2019-07-21T19:18:35Z</date>
+    <date>2019-08-06T13:56:57Z</date>
     <groups>
         <group>
             <name>Templates</name>
@@ -2086,6 +2086,49 @@ If a pulse is not received during some period of time, that means a network issu
             <url/>
             <status>0</status>
             <priority>4</priority>
+            <description/>
+            <type>0</type>
+            <manual_close>0</manual_close>
+            <dependencies>
+                <dependency>
+                    <name>ESXi storage problem</name>
+                    <expression>{Template VMware ESXi Storage Status:esxi.storage.status[{$ESXI_NAME}].regexp(^PROBLEM)}=1</expression>
+                    <recovery_expression/>
+                </dependency>
+                <dependency>
+                    <name>ESXi storage warning</name>
+                    <expression>{Template VMware ESXi Storage Status:esxi.storage.status[{$ESXI_NAME}].regexp(^WARNING)}=1</expression>
+                    <recovery_expression/>
+                </dependency>
+            </dependencies>
+            <tags/>
+        </trigger>
+        <trigger>
+            <expression>{Template VMware ESXi Storage Status:esxi.storage.status[{$ESXI_NAME}].regexp(^PROBLEM)}=1</expression>
+            <recovery_mode>0</recovery_mode>
+            <recovery_expression/>
+            <name>ESXi storage problem</name>
+            <correlation_mode>0</correlation_mode>
+            <correlation_tag/>
+            <url/>
+            <status>0</status>
+            <priority>4</priority>
+            <description/>
+            <type>0</type>
+            <manual_close>0</manual_close>
+            <dependencies/>
+            <tags/>
+        </trigger>
+        <trigger>
+            <expression>{Template VMware ESXi Storage Status:esxi.storage.status[{$ESXI_NAME}].regexp(^WARNING)}=1</expression>
+            <recovery_mode>0</recovery_mode>
+            <recovery_expression/>
+            <name>ESXi storage warning</name>
+            <correlation_mode>0</correlation_mode>
+            <correlation_tag/>
+            <url/>
+            <status>0</status>
+            <priority>3</priority>
             <description/>
             <type>0</type>
             <manual_close>0</manual_close>
