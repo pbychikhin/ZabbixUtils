@@ -70,8 +70,9 @@ def do_main_program(cmdargs):
                     del redis_info[p]
             redis_info["_total_keys"] = redis_total_keys
             redis_info["_mem_fragmentation_ratio_dev"] = abs(1 - redis_info["mem_fragmentation_ratio"])
-            redis_info["_keyspace_hit_ratio"] = redis_info["keyspace_hits"] / (redis_info["keyspace_hits"] +
-                                                                               redis_info["keyspace_misses"])
+            hits_and_misses = redis_info["keyspace_hits"] + redis_info["keyspace_misses"]
+            redis_info["_keyspace_hit_ratio"] = redis_info["keyspace_hits"] / hits_and_misses if \
+                hits_and_misses > 0 else 1
             redis_info["_mem_usage_ratio"] = redis_info["used_memory"] / redis_info["maxmemory"] if \
                 redis_info["maxmemory"] > 0 else 0
             for kv in redis_info.items():
