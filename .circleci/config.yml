@@ -8,7 +8,8 @@ jobs:
     environment:
       ARTIFACTSDIR: &ARTIFACTSDIR
         artifacts
-      MAINFILES: "*.py"
+      PYFILES: "*.py"
+      PSFILES: "*.ps1"
       AUXFILES: |
         cacert.pem
         requirements.txt
@@ -58,12 +59,18 @@ jobs:
                 FILEMAXDESC=$DESC
               fi
               }
-            for FILE in $MAINFILES
+            for FILE in $PYFILES
             do
-              echo "Processing main file $FILE"
+              echo "Processing Python file $FILE"
               get_file_info $FILE
               sed "s/^_FILE_VER\s*=\s*\"to_be_filled_by_CI\"/_FILE_VER = \"${FILEDESC[$FILE]}\"/" $FILE > $ARTIFACTSDIR/$FILE
             done
+            for FILE in $PSFILES
+              do
+                echo "Processing PowerShell file $FILE"
+                get_file_info $FILE
+                sed "s/^\$_FILE_VER\s*=\s*\"to_be_filled_by_CI\"/\$_FILE_VER = \"${FILEDESC[$FILE]}\"/" $FILE > $ARTIFACTSDIR/$FILE
+              done
             for FILE in $AUXFILES
             do
               echo "Copying auxiliary file $FILE"
