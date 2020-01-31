@@ -1,3 +1,6 @@
+1.9
+- Implemented monitoring of a group of windows services: zabbix_svc_group_state.ps1
+
 1.8
 - Implemented ESXi storage status monitoring with vSphere Web Services API: zabbix_item_esxi_storage_status.py
 - Implemented arbitrary volume status monitoring using CLI: zabbix_item_cli_vol_status.py
