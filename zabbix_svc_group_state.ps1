@@ -1,18 +1,18 @@
 param(
-    [Parameter(Mandatory=$true, HelpMessage="Svc group's name")]
+    [Parameter(Mandatory=$true, HelpMessage="Svc group's name", ParameterSetName="Normal")]
     [string]
     $SGroupName,
-    [Parameter(HelpMessage="Svc name regex")]
+    [Parameter(HelpMessage="Svc name regex", ParameterSetName="Normal")]
     [string]
     $SNameRegex,
-    [Parameter(HelpMessage="Svc names list")]
+    [Parameter(HelpMessage="Svc names list", ParameterSetName="Normal")]
     [string]
     $SNameList,
-    [Parameter(HelpMessage="Type of info to be returned")]
+    [Parameter(HelpMessage="Type of info to be returned", ParameterSetName="Normal")]
     [ValidateSet("item", "trapper", "discovery")]
     [string]
     $RTType="trapper",
-    [Parameter(HelpMessage="Get script's version")]
+    [Parameter(HelpMessage="Get script's version", ParameterSetName="Version")]
     [switch]
     [Alias("v")]
     $version
