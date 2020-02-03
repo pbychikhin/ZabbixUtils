@@ -63,7 +63,7 @@ foreach ($svc in $(Get-Service|Where-Object {$_.Name -in $svcnames -and $_.Start
 switch ($RTType) {
     "trapper" {
         '- {0}.overall {1}' -F $SGroupName, $worst
-        $services.GetEnumerator()|ForEach-Object {'- {0}.state[{1}] {2}' -F $SGroupName, $_['{#SERVICE.NAME}'], $_['{#SERVICE.STATUS}']};
+        $services.GetEnumerator()|ForEach-Object {'- "{0}.state[{1}]" {2}' -F $SGroupName, $_['{#SERVICE.NAME}'], $_['{#SERVICE.STATUS}']};
         break;
     }
     "item" {$worst; break;}
