@@ -53,7 +53,7 @@ if ($PSBoundParameters.ContainsKey("PNameList")) {
     $poolnames += @($SNameList)
 }
 if ($PSBoundParameters.ContainsKey("PNameListFile")) {
-    $svcnames += @(Get-Content $PNameListFile)
+    $poolnames += @(Get-Content $PNameListFile)
 }
 
 $worst = "Notfound"
