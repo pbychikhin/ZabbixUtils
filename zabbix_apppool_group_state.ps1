@@ -5,9 +5,12 @@ param(
     [Parameter(HelpMessage="App pool name regex", ParameterSetName="Normal")]
     [string]
     $PNameRegex,
-    [Parameter(HelpMessage="App pool names list", ParameterSetName="Normal")]
+    [Parameter(HelpMessage="App pools names list", ParameterSetName="Normal")]
     [string]
     $PNameList,
+    [Parameter(HelpMessage="File with app pools names list", ParameterSetName="Normal")]
+    [string]
+    $PNameListFile,
     [Parameter(HelpMessage="Type of info to be returned", ParameterSetName="Normal")]
     [ValidateSet("item", "trapper", "discovery")]
     [string]
@@ -48,6 +51,9 @@ else {
 }
 if ($PSBoundParameters.ContainsKey("PNameList")) {
     $poolnames += @($SNameList)
+}
+if ($PSBoundParameters.ContainsKey("PNameListFile")) {
+    $svcnames += @(Get-Content $PNameListFile)
 }
 
 $worst = "Notfound"

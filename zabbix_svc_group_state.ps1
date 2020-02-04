@@ -8,6 +8,9 @@ param(
     [Parameter(HelpMessage="Svc names list", ParameterSetName="Normal")]
     [string]
     $SNameList,
+    [Parameter(HelpMessage="File with svc names list", ParameterSetName="Normal")]
+    [string]
+    $SNameListFile,
     [Parameter(HelpMessage="Type of info to be returned", ParameterSetName="Normal")]
     [ValidateSet("item", "trapper", "discovery")]
     [string]
@@ -48,6 +51,9 @@ else {
 }
 if ($PSBoundParameters.ContainsKey("SNameList")) {
     $svcnames += @($SNameList)
+}
+if ($PSBoundParameters.ContainsKey("SNameListFile")) {
+    $svcnames += @(Get-Content $SNameListFile)
 }
 
 $worst = "Notfound"
