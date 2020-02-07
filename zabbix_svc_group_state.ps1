@@ -20,6 +20,7 @@ param(
     [Alias("v")]
     $version
 )
+$ErrorActionPreference = "Stop"
 
 $_FILE_VER = "to_be_filled_by_CI"
 if ($version) {

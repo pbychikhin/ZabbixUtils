@@ -20,6 +20,7 @@ param(
     [Alias("v")]
     $version
 )
+$ErrorActionPreference = "Stop"
 
 $_FILE_VER = "to_be_filled_by_CI"
 if ($version) {
@@ -41,28 +42,35 @@ foreach ($state in $states) {
 }
 $states = $states_h
 
-Import-Module WebAdministration
-
-if ($PSBoundParameters.ContainsKey("PNameRegex")) {
-    $poolnames = @((Get-ChildItem IIS:\AppPools | Where-Object {$_.Name -imatch $PNameRegex}).Name)
-}
-else {
-    $poolnames = @()
-}
-if ($PSBoundParameters.ContainsKey("PNameList")) {
-    $poolnames += @($SNameList)
-}
-if ($PSBoundParameters.ContainsKey("PNameListFile")) {
-    $poolnames += @(Get-Content $PNameListFile)
-}
-
 $worst = "Notfound"
 $pools = [System.Collections.ArrayList] @()
-foreach ($pool in $(Get-ChildItem IIS:\AppPools|Where-Object {$_.Name -in $poolnames})) {
-    $state_str = [string] $pool.State
-    [void] $pools.Add(@{'{#POOL.NAME}'=$pool.Name; '{#POOL.STATE}'=$state_str})
-    if ($worst -eq "Notfound" -or $states[$worst] -lt $states[$state_str]) {
-        $worst = $state_str
+
+try {
+    Import-Module WebAdministration
+}
+catch {
+}
+
+if (Test-Path IIS:\AppPools) {
+    if ($PSBoundParameters.ContainsKey("PNameRegex")) {
+        $poolnames = @((Get-ChildItem IIS:\AppPools | Where-Object {$_.Name -imatch $PNameRegex}).Name)
+    }
+    else {
+        $poolnames = @()
+    }
+    if ($PSBoundParameters.ContainsKey("PNameList")) {
+        $poolnames += @($SNameList)
+    }
+    if ($PSBoundParameters.ContainsKey("PNameListFile")) {
+        $poolnames += @(Get-Content $PNameListFile)
+    }
+
+    foreach ($pool in $(Get-ChildItem IIS:\AppPools|Where-Object {$_.Name -in $poolnames})) {
+        $state_str = [string] $pool.State
+        [void] $pools.Add(@{'{#POOL.NAME}'=$pool.Name; '{#POOL.STATE}'=$state_str})
+        if ($worst -eq "Notfound" -or $states[$worst] -lt $states[$state_str]) {
+            $worst = $state_str
+        }
     }
 }
 
